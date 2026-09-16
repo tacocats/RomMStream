@@ -1,0 +1,45 @@
+import React, { useState } from 'react';
+import { Pressable, PressableProps, StyleProp, StyleSheet, ViewStyle } from 'react-native';
+import { colors } from '../theme/colors';
+
+interface Props extends PressableProps {
+  style?: StyleProp<ViewStyle>;
+  focusedStyle?: StyleProp<ViewStyle>;
+}
+
+/**
+ * TV remotes drive focus, not hover/press, so every actionable element needs
+ * a visible focused state. This wraps Pressable to add a default one while
+ * still letting screens override it.
+ */
+export function FocusablePressable({ style, focusedStyle, onFocus, onBlur, ...rest }: Props) {
+  const [focused, setFocused] = useState(false);
+
+  return (
+    <Pressable
+      {...rest}
+      onFocus={e => {
+        setFocused(true);
+        onFocus?.(e);
+      }}
+      onBlur={e => {
+        setFocused(false);
+        onBlur?.(e);
+      }}
+      style={[styles.base, style, focused && (focusedStyle ?? styles.focused)]}
+    />
+  );
+}
+
+const styles = StyleSheet.create({
+  base: {
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    backgroundColor: colors.surface,
+  },
+  focused: {
+    borderColor: colors.borderFocused,
+    backgroundColor: colors.surfaceFocused,
+  },
+});

@@ -1,0 +1,59 @@
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import React from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { useAuth } from '../auth/AuthContext';
+import { LoginScreen } from '../screens/LoginScreen';
+import { PlatformListScreen } from '../screens/PlatformListScreen';
+import { PlayerScreen } from '../screens/PlayerScreen';
+import { RomListScreen } from '../screens/RomListScreen';
+import { SettingsScreen } from '../screens/SettingsScreen';
+import { colors } from '../theme/colors';
+import { RootStackParamList } from './types';
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
+
+const screenOptions = {
+  headerStyle: { backgroundColor: colors.surface },
+  headerTintColor: colors.text,
+  contentStyle: { backgroundColor: colors.background },
+};
+
+export function RootNavigator() {
+  const { status } = useAuth();
+
+  if (status === 'loading') {
+    return (
+      <View style={loadingStyles.container}>
+        <ActivityIndicator color={colors.accent} size="large" />
+      </View>
+    );
+  }
+
+  return (
+    <Stack.Navigator screenOptions={screenOptions}>
+      {status === 'signedOut' ? (
+        <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+      ) : (
+        <>
+          <Stack.Screen
+            name="Platforms"
+            component={PlatformListScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen name="Roms" component={RomListScreen} />
+          <Stack.Screen name="Player" component={PlayerScreen} />
+          <Stack.Screen name="Settings" component={SettingsScreen} />
+        </>
+      )}
+    </Stack.Navigator>
+  );
+}
+
+const loadingStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+  },
+});
