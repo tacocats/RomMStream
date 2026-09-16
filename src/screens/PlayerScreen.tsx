@@ -1,8 +1,7 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
-import { WebView, WebViewNavigation } from 'react-native-webview';
-import { WebViewHttpErrorEvent } from 'react-native-webview/lib/WebViewTypes';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import { useAuth } from '../auth/AuthContext';
 import { RootStackParamList } from '../navigation/types';
 import { buildPlayPath, getLoginPath, getPlayPathTemplate } from '../settings/settingsStore';
@@ -12,11 +11,52 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Player'>;
 
 type Step = 'logging-in' | 'ready';
 
-// The RomM web frontend authenticates via an httpOnly session cookie set by
-// POSTing credentials to a login endpoint (see docs.romm.app auth reference).
-// We do that POST as the WebView's own first navigation so the resulting
-// Set-Cookie header lands in the WebView's cookie jar for the server's
-// origin, then hand control to the normal RomM web player for the rom.
+// Any cheap same-origin page will do as a place to run the login script from;
+// RomM's frontend needs a session cookie, and cookies are per-origin, so the
+// login request has to originate from inside the WebView itself.
+const BOOTSTRAP_PATH = '/api/heartbeat';
+
+// RomM's session-login endpoint takes HTTP Basic credentials, and its CSRF
+// middleware skips the token check when an Authorization header is present,
+// so a plain fetch from the page is enough — no CSRF cookie dance required.
+// Android's WebView can't attach headers to a POST navigation, hence fetch.
+function buildLoginScript(loginPath: string, username: string, password: string): string {
+  return `
+    (function () {
+      var post = function (payload) {
+        window.ReactNativeWebView.postMessage(JSON.stringify(payload));
+      };
+      try {
+        var creds = ${JSON.stringify(username)} + ':' + ${JSON.stringify(password)};
+        var basic = btoa(unescape(encodeURIComponent(creds)));
+        fetch(${JSON.stringify(loginPath)}, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { Authorization: 'Basic ' + basic },
+        })
+          .then(function (res) { post({ type: 'login', ok: res.ok, status: res.status }); })
+          .catch(function (err) { post({ type: 'login', ok: false, error: String(err) }); });
+      } catch (err) {
+        post({ type: 'login', ok: false, error: String(err) });
+      }
+    })();
+    true;
+  `;
+}
+
+function describeLoginFailure(status: number | undefined, loginPath: string, error?: string): string {
+  if (status === 401) {
+    return 'RomM rejected the username/password. Sign out and sign in again.';
+  }
+  if (status === 404) {
+    return `Login endpoint not found at ${loginPath}. Update "Login path" in Settings.`;
+  }
+  if (status !== undefined) {
+    return `Sign-in request failed (HTTP ${status}) at ${loginPath}.`;
+  }
+  return `Sign-in request failed: ${error ?? 'unknown error'}`;
+}
+
 export function PlayerScreen({ route, navigation }: Props) {
   const { romId, romName } = route.params;
   const { serverUrl, username, password } = useAuth();
@@ -24,9 +64,6 @@ export function PlayerScreen({ route, navigation }: Props) {
   const [loginPath, setLoginPath] = useState<string | null>(null);
   const [step, setStep] = useState<Step>('logging-in');
   const [loadError, setLoadError] = useState<string | null>(null);
-  // WebView reports an HTTP error via a separate callback from the one that
-  // tells us navigation finished, so stash the status code until then.
-  const loginHttpStatus = useRef<number | null>(null);
 
   useEffect(() => {
     navigation.setOptions({ title: romName });
@@ -39,30 +76,23 @@ export function PlayerScreen({ route, navigation }: Props) {
     });
   }, [serverUrl, romId]);
 
-  const handleNavigationStateChange = (navState: WebViewNavigation) => {
-    if (step !== 'logging-in' || navState.loading) {
+  const handleMessage = (event: WebViewMessageEvent) => {
+    if (step !== 'logging-in' || !loginPath) {
       return;
     }
-    // The WebView fires one navigation-state event for its initial idle
-    // state (about:blank, loading: false) before the login POST even
-    // starts. Ignore it — otherwise we'd advance to the game page before
-    // the sign-in request has run at all.
-    if (navState.url === 'about:blank') {
+    let payload: { type?: string; ok?: boolean; status?: number; error?: string };
+    try {
+      payload = JSON.parse(event.nativeEvent.data);
+    } catch {
       return;
     }
-    if (loginHttpStatus.current && loginHttpStatus.current >= 400) {
-      setLoadError(
-        `Sign-in request failed (HTTP ${loginHttpStatus.current}) at ${loginPath}. ` +
-          'If your RomM version uses a different login endpoint, update "Login path" in Settings.',
-      );
+    if (payload.type !== 'login') {
       return;
     }
-    setStep('ready');
-  };
-
-  const handleHttpError = (syntheticEvent: WebViewHttpErrorEvent) => {
-    if (step === 'logging-in') {
-      loginHttpStatus.current = syntheticEvent.nativeEvent.statusCode;
+    if (payload.ok) {
+      setStep('ready');
+    } else {
+      setLoadError(describeLoginFailure(payload.status, loginPath, payload.error));
     }
   };
 
@@ -87,25 +117,17 @@ export function PlayerScreen({ route, navigation }: Props) {
           <Text style={styles.error}>{loadError}</Text>
         </View>
       )}
+      {/* Keyed on step so the game page gets a fresh WebView that can't
+          re-run the login script. The session cookie survives: the cookie
+          store is shared across WebView instances on both platforms. */}
       <WebView
+        key={step}
         style={styles.webview}
-        source={
-          step === 'logging-in'
-            ? {
-                uri: `${serverUrl}${loginPath}`,
-                method: 'POST',
-                body: `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`,
-                // Android's WebView.postUrl() rejects headers on POST requests
-                // (and already sends this exact content type by default), so
-                // only pass it explicitly where it's actually supported.
-                ...(Platform.OS !== 'android' && {
-                  headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                }),
-              }
-            : { uri: playUrl }
+        source={{ uri: step === 'logging-in' ? `${serverUrl}${BOOTSTRAP_PATH}` : playUrl }}
+        injectedJavaScript={
+          step === 'logging-in' ? buildLoginScript(loginPath, username, password) : undefined
         }
-        onNavigationStateChange={handleNavigationStateChange}
-        onHttpError={handleHttpError}
+        onMessage={handleMessage}
         onError={syntheticEvent => {
           setLoadError(syntheticEvent.nativeEvent.description || 'Failed to load the web player');
         }}

@@ -22,25 +22,28 @@ TV-only app (no phone/tablet target).
    via `POST /api/token` with `grant_type=refresh_token` (see
    `src/auth/AuthContext.tsx`).
 3. **Play** (`PlayerScreen`) — RomM's web frontend (where EmulatorJS runs)
-   authenticates via an `httpOnly` session cookie, not the OAuth token. The
-   WebView's *first* navigation is a real POST to `/api/auth/login` with the
-   stored username/password, which sets that cookie inside the WebView's own
-   cookie jar; once that finishes loading, the WebView navigates to the rom's
-   page and the user is already signed in there too.
+   authenticates via an `httpOnly` session cookie, not the OAuth token, and
+   cookies are per-origin, so the login has to happen *inside* the WebView.
+   The WebView first loads a cheap same-origin page (`GET /api/heartbeat`),
+   then an injected script does `fetch('/api/login')` with HTTP Basic
+   credentials — the same call RomM's own login page makes. RomM's CSRF
+   middleware skips its check when an `Authorization` header is present, so
+   no CSRF cookie handling is needed. On success the WebView is re-created
+   pointing at the rom's page, already signed in.
 
-## ⚠️ One assumption you may need to fix
+   Why not a POST navigation? Android's `WebView.postUrl()` can't carry
+   headers, and without `Authorization` the CSRF middleware returns 403.
 
-The path used to open a rom's web player (`DEFAULT_PLAY_PATH_TEMPLATE` in
-`src/settings/settingsStore.ts`) is guessed as `/rom/{id}`, mirroring the
-`GET /api/roms/{id}` REST route. RomM's frontend routes aren't part of its
-stable API and have moved across versions. If picking a game opens the wrong
-page:
+## Paths verified against RomM's source (but still editable)
 
-1. Open your RomM server in a normal browser, navigate to a game, and check
-   the URL bar.
-2. On the device, open **Settings** from the platform list screen and update
-   the "Web player path template" field (use `{id}` as the rom id
-   placeholder), then hit **Save**. No rebuild needed — it's stored on-device.
+Both the login endpoint (`/api/login`) and the rom page route (`/rom/{id}`)
+were checked against `rommapp/romm` `master` (`backend/endpoints/auth.py`,
+`frontend/src/plugins/router.ts`). They're still editable under **Settings**
+on the device in case a future RomM release moves them — no rebuild needed.
+
+The play path template defaults to `/rom/{id}` (the rom page, with its Play
+button, which works for every platform). `/rom/{id}/ejs` opens the
+EmulatorJS player directly, for platforms it supports.
 
 ## Prerequisites
 

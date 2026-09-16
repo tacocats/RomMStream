@@ -34,9 +34,8 @@ export function SettingsScreen() {
 
       <Text style={styles.label}>Login path</Text>
       <Text style={styles.help}>
-        Endpoint the web player signs in against to pick up its session cookie. Change this if
-        the game screen still shows a login page — different RomM versions have used
-        `/api/auth/login` and `/login`.
+        Endpoint the web player signs in against (HTTP Basic) to pick up its session cookie.
+        Only change this if the game screen reports the login endpoint was not found.
       </Text>
       <TextInput
         style={styles.input}
@@ -48,8 +47,9 @@ export function SettingsScreen() {
 
       <Text style={[styles.label, styles.secondField]}>Web player path template</Text>
       <Text style={styles.help}>
-        Path on your RomM server that opens a rom's web player. Use {'{id}'} as a placeholder for
-        the rom id. Change this if your RomM version uses a different route.
+        Page opened when you pick a game. Use {'{id}'} as the rom id placeholder. The default
+        `/rom/{'{id}'}` is RomM's rom page with its Play button; `/rom/{'{id}'}/ejs` jumps
+        straight into the EmulatorJS player for platforms it supports.
       </Text>
       <TextInput
         style={styles.input}
