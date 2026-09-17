@@ -74,8 +74,8 @@ function authHeaders(accessToken: string): Record<string, string> {
   return { Authorization: `Bearer ${accessToken}` };
 }
 
-// The API returns a plain array in every RomM version we've checked, but
-// tolerate a future `{ items: [...] }` envelope just in case.
+// /api/platforms returns a plain array; /api/roms returns a paginated
+// { items: [...] } envelope. Accept either shape from either endpoint.
 function unwrapList<T>(body: unknown): T[] {
   if (Array.isArray(body)) {
     return body as T[];
@@ -96,18 +96,46 @@ export async function getPlatforms(
   return unwrapList<RommPlatform>(await parseJsonOrThrow(response));
 }
 
+// GET /api/roms is limit/offset paginated ({ items, total, limit, offset })
+// with a default page of 50 (max 10,000). The platform filter is the
+// repeatable `platform_ids` parameter; `platform_id` is silently ignored.
+const ROMS_PAGE_SIZE = 500;
+
 export async function getRoms(
   serverUrl: string,
   accessToken: string,
   platformId?: number,
 ): Promise<RommRom[]> {
-  const params = new URLSearchParams({
-    with_extra: 'false',
-    ...(platformId !== undefined ? { platform_id: String(platformId) } : {}),
-  });
+  const roms: RommRom[] = [];
+  let offset = 0;
 
-  const response = await fetch(`${serverUrl}/api/roms?${params.toString()}`, {
-    headers: authHeaders(accessToken),
-  });
-  return unwrapList<RommRom>(await parseJsonOrThrow(response));
+  for (;;) {
+    const params = new URLSearchParams({
+      limit: String(ROMS_PAGE_SIZE),
+      offset: String(offset),
+      order_by: 'name',
+      order_dir: 'asc',
+      ...(platformId !== undefined ? { platform_ids: String(platformId) } : {}),
+    });
+
+    const response = await fetch(`${serverUrl}/api/roms?${params.toString()}`, {
+      headers: authHeaders(accessToken),
+    });
+    const body = await parseJsonOrThrow(response);
+    const page = unwrapList<RommRom>(body);
+    roms.push(...page);
+
+    const total =
+      body && typeof body === 'object' && typeof (body as { total?: unknown }).total === 'number'
+        ? (body as { total: number }).total
+        : undefined;
+    const exhausted =
+      page.length < ROMS_PAGE_SIZE ||
+      Array.isArray(body) ||
+      (total !== undefined && roms.length >= total);
+    if (exhausted) {
+      return roms;
+    }
+    offset += page.length;
+  }
 }

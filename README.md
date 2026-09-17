@@ -18,9 +18,11 @@ TV-only app (no phone/tablet target).
    AsyncStorage.
 2. **Browse** (`PlatformListScreen` → `RomListScreen`) — uses the stored
    access token as a Bearer token against `GET /api/platforms` and
-   `GET /api/roms?platform_id=...`. A 401 triggers a one-time silent refresh
-   via `POST /api/token` with `grant_type=refresh_token` (see
-   `src/auth/AuthContext.tsx`).
+   `GET /api/roms?platform_ids=...` (note the plural — `platform_id` is
+   silently ignored). `/api/roms` is limit/offset paginated with a default
+   page of 50, so the client pages through the whole platform. A 401 triggers
+   a one-time silent refresh via `POST /api/token` with
+   `grant_type=refresh_token` (see `src/auth/AuthContext.tsx`).
 3. **Play** (`PlayerScreen`) — RomM's web frontend (where EmulatorJS runs)
    authenticates via an `httpOnly` session cookie, not the OAuth token, and
    cookies are per-origin, so the login has to happen *inside* the WebView.
