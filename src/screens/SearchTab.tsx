@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: colors.text,
+    color: colors.textPrimary,
     marginBottom: 16,
   },
   input: {
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    color: colors.text,
+    color: colors.textPrimary,
     fontSize: 16,
     maxWidth: 520,
     marginBottom: 16,
@@ -189,5 +189,5 @@ const styles = StyleSheet.create({
   count: { fontSize: 14, color: colors.textMuted, marginBottom: 8 },
   error: { color: colors.danger, fontSize: 16, marginBottom: 16 },
   retryButton: { paddingHorizontal: 20, paddingVertical: 12 },
-  buttonText: { color: colors.text, fontWeight: '600' },
+  buttonText: { color: colors.textPrimary, fontWeight: '600' },
 });

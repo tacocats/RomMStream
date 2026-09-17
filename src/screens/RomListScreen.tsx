@@ -87,12 +87,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: colors.text,
+    color: colors.textPrimary,
     marginBottom: 16,
   },
   subtitle: { fontSize: 16, color: colors.textMuted },
   centerFill: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   error: { color: colors.danger, fontSize: 16, marginBottom: 16 },
   retryButton: { paddingHorizontal: 20, paddingVertical: 12 },
-  buttonText: { color: colors.text, fontWeight: '600' },
+  buttonText: { color: colors.textPrimary, fontWeight: '600' },
 });

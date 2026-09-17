@@ -12,7 +12,7 @@ import { useAuth } from '../auth/AuthContext';
 import { FocusablePressable } from '../components/FocusablePressable';
 import { PlatformIcon } from '../components/PlatformIcon';
 import { MainNavigation } from '../navigation/types';
-import { colors } from '../theme/colors';
+import { colors, focusRing } from '../theme/colors';
 
 interface Props {
   navigation: MainNavigation;
@@ -118,13 +118,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: colors.text,
+    color: colors.textPrimary,
     marginBottom: 24,
   },
   centerFill: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   error: { color: colors.danger, fontSize: 16, marginBottom: 16 },
   retryButton: { paddingHorizontal: 20, paddingVertical: 12 },
-  buttonText: { color: colors.text, fontWeight: '600' },
+  buttonText: { color: colors.textPrimary, fontWeight: '600' },
   grid: { paddingBottom: 32 },
   tile: {
     flex: 1,
@@ -138,9 +138,9 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   tileFocused: {
-    borderColor: colors.borderFocused,
+    borderColor: focusRing.borderColor,
     borderWidth: 2,
-    backgroundColor: colors.surfaceFocused,
+    backgroundColor: colors.accentSoft,
     transform: [{ scale: 1.05 }],
   },
   iconWrap: {
@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   tileName: {
-    color: colors.text,
+    color: colors.textPrimary,
     fontSize: 15,
     fontWeight: '600',
     textAlign: 'center',

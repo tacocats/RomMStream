@@ -19,8 +19,8 @@ describe('FocusablePressable', () => {
 
     await fireEvent(screen.getByTestId('button'), 'focus');
     expect(screen.getByTestId('button')).toHaveStyle({
-      borderColor: colors.borderFocused,
-      backgroundColor: colors.surfaceFocused,
+      borderColor: colors.accent,
+      backgroundColor: colors.accentSoft,
     });
 
     await fireEvent(screen.getByTestId('button'), 'blur');
@@ -41,7 +41,7 @@ describe('FocusablePressable', () => {
 
     expect(screen.getByTestId('button')).toHaveStyle({ borderColor: 'red' });
     expect(screen.getByTestId('button')).not.toHaveStyle({
-      backgroundColor: colors.surfaceFocused,
+      backgroundColor: colors.accentSoft,
     });
   });
 

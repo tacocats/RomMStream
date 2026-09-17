@@ -85,10 +85,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: colors.text,
+    color: colors.textPrimary,
     marginBottom: 24,
   },
-  label: { color: colors.text, fontSize: 16, marginBottom: 6 },
+  label: { color: colors.textPrimary, fontSize: 16, marginBottom: 6 },
   secondField: { marginTop: 24 },
   help: {
     color: colors.textMuted,
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    color: colors.text,
+    color: colors.textPrimary,
     fontSize: 16,
     maxWidth: 520,
   },
@@ -112,5 +112,5 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignSelf: 'flex-start',
   },
-  buttonText: { color: colors.text, fontWeight: '600' },
+  buttonText: { color: colors.textPrimary, fontWeight: '600' },
 });

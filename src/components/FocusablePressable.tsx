@@ -6,7 +6,7 @@ import {
   StyleSheet,
   ViewStyle,
 } from 'react-native';
-import { colors } from '../theme/colors';
+import { colors, focusRing } from '../theme/colors';
 
 interface Props extends PressableProps {
   style?: StyleProp<ViewStyle>;
@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   focused: {
-    borderColor: colors.borderFocused,
-    backgroundColor: colors.surfaceFocused,
+    borderColor: focusRing.borderColor,
+    backgroundColor: colors.accentSoft,
   },
 });

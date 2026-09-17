@@ -77,7 +77,7 @@ describe('LoginScreen', () => {
 
     expect(auth.signIn).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId('login-spinner')).toBeNull();
-    expect(screen.getByText('Sign In')).toBeOnTheScreen();
+    expect(screen.getByText('Connect')).toBeOnTheScreen();
     expect(screen.getByTestId('login-submit')).toBeEnabled();
   });
 

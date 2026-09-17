@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
   fallback: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surfaceFocused,
+    backgroundColor: colors.avatarBg,
   },
-  fallbackText: { color: colors.text, fontSize: 22, fontWeight: '700' },
+  fallbackText: { color: colors.textPrimary, fontSize: 22, fontWeight: '700' },
 });

@@ -10,7 +10,9 @@ test('boots to the login screen when no session is stored', async () => {
   await render(<App />);
 
   expect(
-    await screen.findByText('Sign in to your RomM server'),
+    await screen.findByText(
+      'Connect to your RomM server to browse your library.',
+    ),
   ).toBeOnTheScreen();
   expect(screen.getByTestId('login-submit')).toBeOnTheScreen();
 });

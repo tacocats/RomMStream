@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   tileName: {
-    color: colors.text,
+    color: colors.textPrimary,
     fontSize: 13,
     marginTop: 6,
     textAlign: 'center',
