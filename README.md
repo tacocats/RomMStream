@@ -1,71 +1,33 @@
 # RommStream
 
-A React Native TV app for Android TV and Apple TV (tvOS) that signs in to a
+> [!WARNING]
+> Requires RomM server 5.3.0-alpha
+
+Stream your games on your TV like you would Movies or Shows on Plex/Jellyfin!
+
+RomMStream is React Native TV app for Android TV and Apple TV (tvOS) that signs in to a
 [RomM](https://github.com/rommapp/romm) server, browses your library by
 platform, and launches the game in a WebView pointed at RomM's own web
-player (EmulatorJS).
+player.
 
-Built on [react-native-tvos](https://github.com/react-native-tvos/react-native-tvos)
-via the `@react-native-tvos/template-tv` community template — this is a
-TV-only app (no phone/tablet target).
+> [!NOTE]
+> Currently Makes use of both of Romms 'In-browser Play' and 'Emulator Streaming' - In the future, `In-Browser Play` can be disabled
 
-## How it works
+Depending on the ROM, it will automatically launch into either:
 
-1. **Login** (`src/screens/LoginScreen.tsx`) — takes a server URL, username,
-   and password, and exchanges them for an OAuth token via RomM's
-   `POST /api/token` endpoint (`grant_type=password`). Tokens and credentials
-   are stored in the OS keychain via `react-native-keychain`, never in plain
-   AsyncStorage.
-2. **Browse** (`MainScreen` with its Home / Platforms / Search tabs →
-   `RomListScreen`) — the signed-in landing screen is a top bar over three
-   tabs held as local state (switching tabs never adds navigation history).
-   Platforms and the rom list use the stored access token as a Bearer token
-   against `GET /api/platforms` and `GET /api/roms?platform_ids=...` (note
-   the plural — `platform_id` is silently ignored). `/api/roms` is
-   limit/offset paginated with a default page of 50, so the client pages
-   through the whole platform. Search hits the same endpoint with
-   `search_term=...`, debounced while typing. A 401 triggers a one-time
-   silent refresh via `POST /api/token` with `grant_type=refresh_token`
-   (see `src/auth/AuthContext.tsx`).
-3. **Play** (`PlayerScreen`) — RomM's web frontend (where EmulatorJS runs)
-   authenticates via an `httpOnly` session cookie, not the OAuth token, and
-   cookies are per-origin, so the login has to happen _inside_ the WebView.
-   The WebView first loads a cheap same-origin page (`GET /api/heartbeat`),
-   then an injected script does `fetch('/api/login')` with HTTP Basic
-   credentials — the same call RomM's own login page makes. RomM's CSRF
-   middleware skips its check when an `Authorization` header is present, so
-   no CSRF cookie handling is needed. On success the WebView is re-created
-   pointing at the rom's page, already signed in.
+- In-Browser Play
+  - [Emulatorjs](https://docs.romm.app/5.3.0-alpha/using/in-browser-play/emulatorjs/)
+  - [js-dos](https://docs.romm.app/5.3.0-alpha/using/in-browser-play/js-dos/)
+  - [MS-DOS](https://docs.romm.app/5.3.0-alpha/using/in-browser-play/ms-dos/)
+  - [PICO-8](https://docs.romm.app/5.3.0-alpha/using/in-browser-play/pico-8/)
+  - [Ruffle](https://docs.romm.app/5.3.0-alpha/using/in-browser-play/ruffle/)
+- [Emulator Streaming](https://docs.romm.app/5.3.0-alpha/using/emulator-streaming/)
 
-   Why not a POST navigation? Android's `WebView.postUrl()` can't carry
-   headers, and without `Authorization` the CSRF middleware returns 403.
+## Screenshots
 
-## Paths verified against RomM's source (but still editable)
+## Developers
 
-Both the login endpoint (`/api/login`) and the rom page route (`/rom/{id}`)
-were checked against `rommapp/romm` `master` (`backend/endpoints/auth.py`,
-`frontend/src/plugins/router.ts`). They're still editable under **Settings**
-on the device in case a future RomM release moves them — no rebuild needed.
-
-The play path defaults to `auto`, which mirrors RomM's own Play button
-(`frontend/src/components/common/Game/PlayBtn.vue`): platforms with an
-EmulatorJS core open `/rom/{id}/ejs`, Flash/browser games open
-`/rom/{id}/ruffle`, Win3x/Win9x open `/rom/{id}/jsdos`, PICO-8 opens
-`/rom/{id}/pico8`, and anything else falls back to the rom page `/rom/{id}`.
-RomM's player routes land on a pre-play lobby (saves/states picker) whose
-Play button only appears once the rom has loaded; the player screen injects
-a small script that presses it (`.play-button` in the v1 UI,
-`.r-v2-ejs__play` in v2) so the game starts without scrolling a web page with
-a remote. The same script turns off EmulatorJS's on-screen touch gamepad via
-its `virtual-gamepad` setting (Android TV reports a touchscreen, so
-EmulatorJS would otherwise draw one), with a CSS rule as a fallback.
-
-The EmulatorJS platform list is a snapshot of RomM's `_EJS_CORES_MAP` in
-`src/settings/settingsStore.ts`; if a newly supported platform lands on the
-rom page instead of the player, add its slug there. A fixed template such as
-`/rom/{id}` can be set in Settings to override the auto behaviour.
-
-## Prerequisites
+### Prerequisites
 
 - Node.js and npm
 - For Android TV: Android SDK + NDK (the Gradle build will auto-download the
@@ -75,7 +37,7 @@ rom page instead of the player, add its slug there. A fixed template such as
   on Linux, so the tvOS side has been configured but not pod-installed or
   build-verified — that must happen on a Mac.
 
-### Known environment gotchas already fixed in this repo
+#### Known environment gotchas already fixed in this repo
 
 - **Gradle 9 / JDK toolchain crash**: the RN 0.83 gradle-plugin bundles
   `foojay-resolver-convention:0.5.0`, which references a Gradle enum member
@@ -93,7 +55,7 @@ rom page instead of the player, add its slug there. A fixed template such as
 - Use JDK 17 to run Gradle: `JAVA_HOME=/path/to/java-17 ./gradlew ...` (this
   machine also has JDK 21 as the default `java`, which is incompatible).
 
-## Running it
+### Running it
 
 Start Metro:
 
@@ -101,14 +63,14 @@ Start Metro:
 npm start
 ```
 
-### Android TV
+#### Android TV
 
 ```sh
 npm run android
 # or, once you have an emulator/device: npx react-native run-android
 ```
 
-### Apple TV (macOS only)
+#### Apple TV (macOS only)
 
 ```sh
 bundle install
@@ -116,9 +78,9 @@ bundle exec pod install --project-directory=ios
 npx react-native run-tvos --simulator "Apple TV"
 ```
 
-## Testing
+### Testing
 
-### Unit, integration and component tests
+#### Unit, integration and component tests
 
 Jest with [React Native Testing Library](https://callstack.github.io/react-native-testing-library/)
 v14 (note its API is async: `await render(...)`, `await fireEvent.press(...)`).
@@ -147,7 +109,7 @@ npm run lint
   `await expect(act(...)).resolves` does not wait for it. Wrap it in
   `Promise.resolve(...)` first (see `actAsync` in the AuthContext test).
 
-### End-to-end tests (Detox, Android TV)
+#### End-to-end tests (Detox, Android TV)
 
 `e2e/login.test.js` boots the app on an Android TV emulator, checks the login
 form and drives a sign-in against an unreachable server. Detox does not
@@ -181,7 +143,7 @@ physical Android TV attached over `adb`. Running against a release build
 would additionally need a network security config permitting cleartext to
 `10.0.2.2` (Detox's test server), see the Detox docs.
 
-### Git hooks
+#### Git hooks
 
 [lefthook](https://lefthook.dev) installs the hooks on `npm install`
 (`lefthook.yml`):
@@ -193,7 +155,7 @@ would additionally need a network security config permitting cleartext to
 Skip once with `LEFTHOOK=0 git commit ...`; put personal tweaks in the
 git-ignored `lefthook-local.yml`. Detox never runs from a hook.
 
-## Project layout
+### Project layout
 
 ```
 src/
@@ -208,7 +170,7 @@ src/
 e2e/              Detox end-to-end tests (Android TV)
 ```
 
-## Notes on HTTP-only RomM servers
+### Notes on HTTP-only RomM servers
 
 Many self-hosted RomM instances run over plain HTTP on a LAN.
 
