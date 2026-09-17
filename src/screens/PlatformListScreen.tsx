@@ -11,6 +11,7 @@ import { getPlatforms } from '../api/rommClient';
 import { RommPlatform } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { FocusablePressable } from '../components/FocusablePressable';
+import { PlatformIcon } from '../components/PlatformIcon';
 import { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 
@@ -74,20 +75,32 @@ export function PlatformListScreen({ navigation }: Props) {
         <FlatList
           data={platforms}
           keyExtractor={item => String(item.id)}
-          numColumns={4}
+          numColumns={5}
           contentContainerStyle={styles.grid}
           renderItem={({ item, index }) => (
             <FocusablePressable
               style={styles.tile}
+              focusedStyle={styles.tileFocused}
               hasTVPreferredFocus={index === 0}
               onPress={() =>
                 navigation.navigate('Roms', { platformId: item.id, platformName: item.name })
               }>
+              <View style={styles.iconWrap}>
+                <PlatformIcon
+                  serverUrl={serverUrl}
+                  name={item.name}
+                  slug={item.slug}
+                  fsSlug={item.fs_slug}
+                  size={48}
+                />
+              </View>
               <Text style={styles.tileName} numberOfLines={2}>
                 {item.name}
               </Text>
               {typeof item.rom_count === 'number' && (
-                <Text style={styles.tileCount}>{item.rom_count} games</Text>
+                <Text style={styles.tileCount}>
+                  {item.rom_count} {item.rom_count === 1 ? 'game' : 'games'}
+                </Text>
               )}
             </FocusablePressable>
           )}
@@ -118,10 +131,34 @@ const styles = StyleSheet.create({
   tile: {
     flex: 1,
     margin: 8,
-    minHeight: 100,
-    padding: 16,
+    minHeight: 150,
+    padding: 18,
+    alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  tileName: { color: colors.text, fontSize: 16, fontWeight: '600' },
-  tileCount: { color: colors.textMuted, fontSize: 13, marginTop: 6 },
+  tileFocused: {
+    borderColor: colors.borderFocused,
+    borderWidth: 2,
+    backgroundColor: colors.surfaceFocused,
+    transform: [{ scale: 1.05 }],
+  },
+  iconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+    marginBottom: 12,
+  },
+  tileName: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  tileCount: { color: colors.textMuted, fontSize: 12, marginTop: 4, textAlign: 'center' },
 });
