@@ -60,7 +60,9 @@ function buildLoginScript(
 // in the v1 UI (views/Player/EmulatorJS/Base.vue), `.r-v2-ejs__play` in the
 // v2 UI. Its handler needs no user gesture, so press it for the user: a TV
 // remote shouldn't have to scroll a web page to start the game. A button
-// simply labelled "Play" is the last resort. On pages without one (the plain
+// simply labelled "Play" is the last resort. The `/rom/:id/stream` route
+// instead lands on a lobby whose button reads "Stream on <container>", so
+// that's matched by prefix too. On pages without any of these (the plain
 // rom page fallback) this gives up after a while.
 //
 // EmulatorJS also draws an on-screen touch gamepad whenever the device
@@ -92,7 +94,8 @@ const AUTO_PLAY_SCRIPT = `
       if (byClass) { return byClass; }
       var buttons = document.querySelectorAll('button');
       for (var i = 0; i < buttons.length; i++) {
-        if (buttons[i].textContent.trim().toLowerCase() === 'play') { return buttons[i]; }
+        var text = buttons[i].textContent.trim().toLowerCase();
+        if (text === 'play' || text.indexOf('stream on') === 0) { return buttons[i]; }
       }
       return null;
     };
