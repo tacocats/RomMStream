@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   act,
   fireEvent,
@@ -7,13 +8,22 @@ import {
 } from '@testing-library/react-native';
 import React from 'react';
 import { fetchCall, fetchMock, mockFetchOnce } from '../../testUtils/fetchMock';
-import { iconCandidates, PlatformIcon } from '../PlatformIcon';
+import { PlatformIcon } from '../PlatformIcon';
+import { iconCandidates, resetPlatformIconCache } from '../platformIconCache';
 
 const SVG =
   '<svg xmlns="http://www.w3.org/2000/svg"><style>.cls-1{fill:#c1c1c1;}</style>' +
   '<path class="cls-1" d="M0 0"/></svg>';
+// An .ico starts with a zero byte, never with markup.
+const ICO = String.fromCharCode(0, 0, 1, 0) + 'binary';
+const HTML = '<!doctype html><html><body>RomM</body></html>';
 
 const BASE = 'https://romm.test/assets/platforms';
+const KEY_PREFIX = 'rommstream.platformIcon.v1:https://romm.test|';
+
+beforeEach(() => {
+  resetPlatformIconCache();
+});
 
 describe('iconCandidates', () => {
   it('mirrors the web UI order: fs_slug before slug, vector before ico', () => {
@@ -79,9 +89,28 @@ describe('PlatformIcon', () => {
     expect(fetchCall(1)[0]).toBe(`${BASE}/systematic/psvita.svg`);
   });
 
-  it('renders the .ico as an image when no svg exists, then moves on to the slug', async () => {
+  it('renders the .ico as an image when no svg exists', async () => {
     mockFetchOnce({ status: 404 });
     mockFetchOnce({ status: 404 });
+    mockFetchOnce({ text: ICO });
+
+    await render(
+      <PlatformIcon
+        serverUrl="https://romm.test"
+        name="Browser"
+        slug="browser"
+      />,
+    );
+
+    const image = await screen.findByTestId('platform-icon-image');
+    expect(image.props.source).toEqual({ uri: `${BASE}/browser.ico` });
+    expect(fetchMock()).toHaveBeenCalledTimes(3);
+  });
+
+  it('skips an .ico answered by the SPA page and moves on to the slug', async () => {
+    mockFetchOnce({ status: 404 });
+    mockFetchOnce({ status: 404 });
+    mockFetchOnce({ text: HTML });
     mockFetchOnce({ text: SVG });
 
     await render(
@@ -93,20 +122,13 @@ describe('PlatformIcon', () => {
       />,
     );
 
-    const image = await screen.findByTestId('platform-icon-image');
-    expect(image.props.source).toEqual({ uri: `${BASE}/n64-roms.ico` });
-    expect(fetchMock()).toHaveBeenCalledTimes(2);
-
-    await act(async () => {
-      fireEvent(image, 'error');
-    });
-
     await screen.findByTestId('svg-xml');
-    expect(fetchCall(2)[0]).toBe(`${BASE}/n64.svg`);
+    expect(fetchCall(2)[0]).toBe(`${BASE}/n64-roms.ico`);
+    expect(fetchCall(3)[0]).toBe(`${BASE}/n64.svg`);
   });
 
   it('treats a 200 that is not svg markup (the SPA fallback page) as missing', async () => {
-    mockFetchOnce({ text: '<!doctype html><html><body>RomM</body></html>' });
+    mockFetchOnce({ text: HTML });
     mockFetchOnce({ text: SVG });
 
     await render(
@@ -123,12 +145,9 @@ describe('PlatformIcon', () => {
   });
 
   it('shows a letter badge when no icon can be loaded', async () => {
-    // arcade.svg, systematic/arcade.svg, then (after the .ico errors)
-    // mame.svg and systematic/mame.svg.
-    mockFetchOnce({ status: 404 });
-    mockFetchOnce({ status: 404 });
-    mockFetchOnce({ status: 404 });
-    mockFetchOnce({ status: 500 });
+    for (let i = 0; i < 6; i += 1) {
+      mockFetchOnce({ status: i === 5 ? 500 : 404 });
+    }
 
     await render(
       <PlatformIcon
@@ -140,23 +159,8 @@ describe('PlatformIcon', () => {
       />,
     );
 
-    const first = await screen.findByTestId('platform-icon-image');
-    expect(first.props.source).toEqual({ uri: `${BASE}/arcade.ico` });
-    await act(async () => {
-      fireEvent(first, 'error');
-    });
-
-    await waitFor(() =>
-      expect(screen.getByTestId('platform-icon-image').props.source).toEqual({
-        uri: `${BASE}/mame.ico`,
-      }),
-    );
-    await act(async () => {
-      fireEvent(screen.getByTestId('platform-icon-image'), 'error');
-    });
-
     await screen.findByText('A');
-    expect(fetchMock()).toHaveBeenCalledTimes(4);
+    expect(fetchMock()).toHaveBeenCalledTimes(6);
     expect(screen.queryByTestId('svg-xml')).toBeNull();
     expect(screen.queryByTestId('platform-icon-image')).toBeNull();
   });
@@ -166,8 +170,78 @@ describe('PlatformIcon', () => {
       <PlatformIcon serverUrl="https://romm.test" name="homebrew" />,
     );
 
-    expect(screen.getByText('H')).toBeOnTheScreen();
+    await screen.findByText('H');
     expect(fetchMock()).not.toHaveBeenCalled();
+  });
+
+  it('resolves each platform once per session and persists the result', async () => {
+    mockFetchOnce({ text: SVG });
+
+    await render(
+      <>
+        <PlatformIcon serverUrl="https://romm.test" name="Game Boy" slug="gb" />
+        <PlatformIcon serverUrl="https://romm.test" name="Game Boy" slug="gb" />
+      </>,
+    );
+
+    expect(await screen.findAllByTestId('svg-xml')).toHaveLength(2);
+    expect(fetchMock()).toHaveBeenCalledTimes(1);
+    const stored = await AsyncStorage.getItem(`${KEY_PREFIX}gb`);
+    expect(JSON.parse(String(stored))).toEqual({
+      kind: 'svg',
+      xml: expect.stringContaining('<path'),
+    });
+  });
+
+  it('uses a persisted icon on a fresh session without touching the network', async () => {
+    await AsyncStorage.setItem(
+      `${KEY_PREFIX}gb`,
+      JSON.stringify({ kind: 'svg', xml: '<svg><path d="M1 1"/></svg>' }),
+    );
+
+    await render(
+      <PlatformIcon serverUrl="https://romm.test" name="Game Boy" slug="gb" />,
+    );
+
+    const icon = await screen.findByTestId('svg-xml');
+    expect(icon.props.xml).toContain('M1 1');
+    expect(fetchMock()).not.toHaveBeenCalled();
+  });
+
+  it('does not persist a miss, so a later RomM release can fill it in', async () => {
+    mockFetchOnce({ status: 404 });
+    mockFetchOnce({ status: 404 });
+    mockFetchOnce({ status: 404 });
+
+    await render(
+      <PlatformIcon serverUrl="https://romm.test" name="Homebrew" slug="hb" />,
+    );
+
+    await screen.findByText('H');
+    expect(await AsyncStorage.getItem(`${KEY_PREFIX}hb`)).toBeNull();
+  });
+
+  it('forgets a cached .ico that fails to render and shows the badge', async () => {
+    await AsyncStorage.setItem(
+      `${KEY_PREFIX}browser`,
+      JSON.stringify({ kind: 'ico', url: `${BASE}/browser.ico` }),
+    );
+
+    await render(
+      <PlatformIcon
+        serverUrl="https://romm.test"
+        name="Browser"
+        slug="browser"
+      />,
+    );
+
+    const image = await screen.findByTestId('platform-icon-image');
+    await act(async () => {
+      fireEvent(image, 'error');
+    });
+
+    await screen.findByText('B');
+    expect(await AsyncStorage.getItem(`${KEY_PREFIX}browser`)).toBeNull();
   });
 
   it('ignores a response that arrives after unmounting', async () => {

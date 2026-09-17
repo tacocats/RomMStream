@@ -1,7 +1,14 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { SvgXml } from 'react-native-svg';
 import { colors } from '../theme/colors';
+import {
+  invalidatePlatformIcon,
+  ResolvedIcon,
+  resolvePlatformIcon,
+} from './platformIconCache';
+
+export { iconCandidates, inlineSvgClasses } from './platformIconCache';
 
 interface Props {
   serverUrl: string;
@@ -11,87 +18,8 @@ interface Props {
   size?: number;
 }
 
-// RomM's platform SVGs carry their colors in a <style> block keyed by CSS
-// class (e.g. ".cls-1 { fill: #c1c1c1; }"). react-native-svg's renderer
-// doesn't resolve stylesheet classes, so every shape would fall back to the
-// SVG default fill of black. Inline each class's declarations onto the
-// elements that use it before handing the markup to SvgXml.
-export function inlineSvgClasses(svg: string): string {
-  const styleMatch = svg.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
-  if (!styleMatch) {
-    return svg;
-  }
-
-  const declarationsByClass = new Map<string, string>();
-  const ruleRegex = /([^{}]+)\{([^{}]*)\}/g;
-  let rule: RegExpExecArray | null;
-  while ((rule = ruleRegex.exec(styleMatch[1]))) {
-    const [, selectorList, declarations] = rule;
-    const trimmed = declarations.trim();
-    if (!trimmed) {
-      continue;
-    }
-    for (const selector of selectorList.split(',')) {
-      const className = selector.trim().replace(/^\./, '');
-      if (!className) {
-        continue;
-      }
-      const existing = declarationsByClass.get(className);
-      declarationsByClass.set(
-        className,
-        existing ? `${existing};${trimmed}` : trimmed,
-      );
-    }
-  }
-
-  return svg
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/i, '')
-    .replace(/class="([^"]+)"/g, (match, classNames: string) => {
-      const declarations = classNames
-        .split(/\s+/)
-        .map((name: string) => declarationsByClass.get(name))
-        .filter((d: string | undefined): d is string => !!d)
-        .join(';');
-      return declarations ? `${match} style="${declarations}"` : match;
-    });
-}
-
-type IconCandidate = { url: string; kind: 'svg' | 'ico' };
-
-// RomM ships most platform icons as .ico and only some as .svg, and its web
-// UI (components/common/Platform/PlatformIcon.vue) tries fs_slug then slug,
-// .svg before .ico. Since v3.8 the repo also carries a larger vector set
-// under assets/platforms/systematic/ that nothing in the web UI references
-// but which the Docker image copies verbatim, so it is reachable and is
-// preferred over the .ico for the same slug.
-export function iconCandidates(
-  serverUrl: string,
-  slugs: Array<string | undefined>,
-): IconCandidate[] {
-  const unique = Array.from(
-    new Set(
-      slugs
-        .filter((s): s is string => !!s)
-        .map(s => s.trim().toLowerCase())
-        .filter(s => s.length > 0),
-    ),
-  );
-  const base = `${serverUrl}/assets/platforms`;
-  return unique.flatMap(slug => [
-    { kind: 'svg', url: `${base}/${slug}.svg` },
-    { kind: 'svg', url: `${base}/systematic/${slug}.svg` },
-    { kind: 'ico', url: `${base}/${slug}.ico` },
-  ]);
-}
-
-// A missing asset doesn't always 404: RomM's SPA fallback can answer with
-// 200 and index.html, which must not be handed to the SVG renderer.
-function looksLikeSvg(text: string): boolean {
-  return /<svg[\s>]/i.test(text);
-}
-
-// Walk the candidate list in order and fall back to a letter badge when
-// none resolve.
+// Renders whatever the cache resolves for the platform: an inlined SVG, an
+// .ico via Image, or a letter badge when RomM has no icon for it.
 export function PlatformIcon({
   serverUrl,
   name,
@@ -99,83 +27,54 @@ export function PlatformIcon({
   fsSlug,
   size = 56,
 }: Props) {
-  const candidates = useMemo(
-    () => iconCandidates(serverUrl, [fsSlug, slug]),
-    [serverUrl, fsSlug, slug],
-  );
-  const [attempt, setAttempt] = useState(0);
-  const [xml, setXml] = useState<string | null>(null);
+  const [icon, setIcon] = useState<ResolvedIcon | null>(null);
 
   useEffect(() => {
-    setAttempt(0);
-  }, [candidates]);
-
-  const candidate = candidates[attempt];
-  const candidateUrl = candidate?.url;
-  const candidateKind = candidate?.kind;
-
-  useEffect(() => {
-    setXml(null);
-    if (!candidateUrl || candidateKind !== 'svg') {
-      return;
-    }
     let cancelled = false;
-    fetch(candidateUrl)
-      .then(res => {
-        if (!res.ok) {
-          throw new Error('icon not found');
-        }
-        return res.text();
-      })
-      .then(text => {
-        if (cancelled) {
-          return;
-        }
-        if (!looksLikeSvg(text)) {
-          throw new Error('not an svg');
-        }
-        setXml(inlineSvgClasses(text));
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setAttempt(a => a + 1);
-        }
-      });
+    setIcon(null);
+    resolvePlatformIcon(serverUrl, [fsSlug, slug]).then(resolved => {
+      if (!cancelled) {
+        setIcon(resolved);
+      }
+    });
     return () => {
       cancelled = true;
     };
-  }, [candidateUrl, candidateKind]);
+  }, [serverUrl, fsSlug, slug]);
 
-  if (!candidate) {
-    return (
-      <View
-        style={[
-          styles.fallback,
-          { width: size, height: size, borderRadius: size / 4 },
-        ]}
-      >
-        <Text style={styles.fallbackText}>{name.charAt(0).toUpperCase()}</Text>
-      </View>
-    );
+  if (!icon) {
+    return <View style={{ width: size, height: size }} />;
   }
 
-  if (candidate.kind === 'ico') {
+  if (icon.kind === 'svg') {
+    return <SvgXml xml={icon.xml} width={size} height={size} />;
+  }
+
+  if (icon.kind === 'ico') {
     return (
       <Image
         testID="platform-icon-image"
-        source={{ uri: candidate.url }}
+        source={{ uri: icon.url }}
         style={{ width: size, height: size }}
         resizeMode="contain"
-        onError={() => setAttempt(a => a + 1)}
+        onError={() => {
+          invalidatePlatformIcon(serverUrl, [fsSlug, slug]);
+          setIcon({ kind: 'none' });
+        }}
       />
     );
   }
 
-  if (!xml) {
-    return <View style={{ width: size, height: size }} />;
-  }
-
-  return <SvgXml xml={xml} width={size} height={size} />;
+  return (
+    <View
+      style={[
+        styles.fallback,
+        { width: size, height: size, borderRadius: size / 4 },
+      ]}
+    >
+      <Text style={styles.fallbackText}>{name.charAt(0).toUpperCase()}</Text>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
