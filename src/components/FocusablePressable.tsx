@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
-import { Pressable, PressableProps, StyleProp, StyleSheet, ViewStyle } from 'react-native';
+import {
+  Pressable,
+  PressableProps,
+  StyleProp,
+  StyleSheet,
+  ViewStyle,
+} from 'react-native';
 import { colors } from '../theme/colors';
 
 interface Props extends PressableProps {
@@ -12,7 +18,13 @@ interface Props extends PressableProps {
  * a visible focused state. This wraps Pressable to add a default one while
  * still letting screens override it.
  */
-export function FocusablePressable({ style, focusedStyle, onFocus, onBlur, ...rest }: Props) {
+export function FocusablePressable({
+  style,
+  focusedStyle,
+  onFocus,
+  onBlur,
+  ...rest
+}: Props) {
   const [focused, setFocused] = useState(false);
 
   return (

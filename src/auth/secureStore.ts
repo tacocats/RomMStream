@@ -23,7 +23,9 @@ export async function saveCredentials(creds: StoredCredentials): Promise<void> {
 }
 
 export async function loadCredentials(): Promise<StoredCredentials | null> {
-  const result = await Keychain.getGenericPassword({ service: CREDENTIALS_SERVICE });
+  const result = await Keychain.getGenericPassword({
+    service: CREDENTIALS_SERVICE,
+  });
   if (!result) {
     return null;
   }

@@ -26,7 +26,10 @@ async function parseJsonOrThrow(response: Response) {
       body && typeof body === 'object' && 'detail' in body
         ? String((body as { detail: unknown }).detail)
         : response.statusText;
-    throw new RommApiError(detail || `Request failed (${response.status})`, response.status);
+    throw new RommApiError(
+      detail || `Request failed (${response.status})`,
+      response.status,
+    );
   }
   return body;
 }
@@ -80,7 +83,11 @@ function unwrapList<T>(body: unknown): T[] {
   if (Array.isArray(body)) {
     return body as T[];
   }
-  if (body && typeof body === 'object' && Array.isArray((body as { items?: unknown }).items)) {
+  if (
+    body &&
+    typeof body === 'object' &&
+    Array.isArray((body as { items?: unknown }).items)
+  ) {
     return (body as { items: T[] }).items;
   }
   return [];
@@ -126,7 +133,9 @@ export async function getRoms(
     roms.push(...page);
 
     const total =
-      body && typeof body === 'object' && typeof (body as { total?: unknown }).total === 'number'
+      body &&
+      typeof body === 'object' &&
+      typeof (body as { total?: unknown }).total === 'number'
         ? (body as { total: number }).total
         : undefined;
     const exhausted =

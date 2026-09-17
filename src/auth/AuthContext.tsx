@@ -6,7 +6,11 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import { login as apiLogin, normalizeServerUrl, refreshAccessToken } from '../api/rommClient';
+import {
+  login as apiLogin,
+  normalizeServerUrl,
+  refreshAccessToken,
+} from '../api/rommClient';
 import { RommApiError } from '../api/types';
 import {
   clearAll,
@@ -29,13 +33,19 @@ interface AuthState {
 }
 
 interface AuthContextValue extends AuthState {
-  signIn: (serverUrl: string, username: string, password: string) => Promise<void>;
+  signIn: (
+    serverUrl: string,
+    username: string,
+    password: string,
+  ) => Promise<void>;
   signOut: () => Promise<void>;
   /**
    * Runs an authenticated API call, transparently refreshing the access
    * token once and retrying if the first attempt comes back as 401.
    */
-  withAuth: <T>(fn: (serverUrl: string, accessToken: string) => Promise<T>) => Promise<T>;
+  withAuth: <T>(
+    fn: (serverUrl: string, accessToken: string) => Promise<T>,
+  ) => Promise<T>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -54,7 +64,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     (async () => {
-      const [creds, tokens] = await Promise.all([loadCredentials(), loadTokens()]);
+      const [creds, tokens] = await Promise.all([
+        loadCredentials(),
+        loadTokens(),
+      ]);
       if (creds && tokens) {
         setState({
           status: 'signedIn',
@@ -70,26 +83,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })();
   }, []);
 
-  const signIn = useCallback(async (rawServerUrl: string, username: string, password: string) => {
-    const serverUrl = normalizeServerUrl(rawServerUrl);
-    const tokenResponse = await apiLogin(serverUrl, username, password);
+  const signIn = useCallback(
+    async (rawServerUrl: string, username: string, password: string) => {
+      const serverUrl = normalizeServerUrl(rawServerUrl);
+      const tokenResponse = await apiLogin(serverUrl, username, password);
 
-    const credentials: StoredCredentials = { serverUrl, username, password };
-    await saveCredentials(credentials);
-    await saveTokens({
-      accessToken: tokenResponse.access_token,
-      refreshToken: tokenResponse.refresh_token,
-    });
+      const credentials: StoredCredentials = { serverUrl, username, password };
+      await saveCredentials(credentials);
+      await saveTokens({
+        accessToken: tokenResponse.access_token,
+        refreshToken: tokenResponse.refresh_token,
+      });
 
-    setState({
-      status: 'signedIn',
-      serverUrl,
-      username,
-      password,
-      accessToken: tokenResponse.access_token,
-      refreshToken: tokenResponse.refresh_token,
-    });
-  }, []);
+      setState({
+        status: 'signedIn',
+        serverUrl,
+        username,
+        password,
+        accessToken: tokenResponse.access_token,
+        refreshToken: tokenResponse.refresh_token,
+      });
+    },
+    [],
+  );
 
   const signOut = useCallback(async () => {
     await clearAll();
@@ -97,12 +113,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const withAuth = useCallback(
-    async <T,>(fn: (serverUrl: string, accessToken: string) => Promise<T>): Promise<T> => {
+    async <T,>(
+      fn: (serverUrl: string, accessToken: string) => Promise<T>,
+    ): Promise<T> => {
       try {
         return await fn(state.serverUrl, state.accessToken);
       } catch (error) {
-        if (error instanceof RommApiError && error.status === 401 && state.refreshToken) {
-          const refreshed = await refreshAccessToken(state.serverUrl, state.refreshToken);
+        if (
+          error instanceof RommApiError &&
+          error.status === 401 &&
+          state.refreshToken
+        ) {
+          const refreshed = await refreshAccessToken(
+            state.serverUrl,
+            state.refreshToken,
+          );
           await saveTokens({
             accessToken: refreshed.access_token,
             refreshToken: refreshed.refresh_token,
