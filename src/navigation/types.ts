@@ -4,7 +4,10 @@ export type RootStackParamList = {
   Login: undefined;
   /** Top bar host: Home / Platforms / Search tabs. */
   Main: undefined;
-  Roms: { platformId: number; platformName: string };
+  Roms:
+    | { platformId: number; platformName: string }
+    | { collectionId: number; collectionName: string }
+    | { virtualCollectionId: string; virtualCollectionName: string };
   Player: { romId: number; romName: string; platformSlug: string };
   Settings: undefined;
 };

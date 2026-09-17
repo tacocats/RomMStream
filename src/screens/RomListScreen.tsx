@@ -1,7 +1,11 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { getRoms } from '../api/rommClient';
+import {
+  getRoms,
+  getRomsByCollection,
+  getRomsByVirtualCollection,
+} from '../api/rommClient';
 import { RommRom } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { FocusablePressable } from '../components/FocusablePressable';
@@ -11,8 +15,38 @@ import { colors } from '../theme/colors';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Roms'>;
 
+/** What kind of games list this screen shows, and its empty-state copy. */
+function describe(params: RootStackParamList['Roms']) {
+  if ('collectionId' in params) {
+    return {
+      title: params.collectionName,
+      emptyMessage: 'No games found in this collection.',
+      load: (url: string, token: string) =>
+        getRomsByCollection(url, token, params.collectionId),
+    };
+  }
+  if ('virtualCollectionId' in params) {
+    return {
+      title: params.virtualCollectionName,
+      emptyMessage: 'No games found in this collection.',
+      load: (url: string, token: string) =>
+        getRomsByVirtualCollection(url, token, params.virtualCollectionId),
+    };
+  }
+  return {
+    title: params.platformName,
+    emptyMessage: 'No games found for this platform.',
+    load: (url: string, token: string) =>
+      getRoms(url, token, params.platformId),
+  };
+}
+
 export function RomListScreen({ route, navigation }: Props) {
-  const { platformId, platformName } = route.params;
+  const {
+    title,
+    emptyMessage,
+    load: loadRoms,
+  } = useMemo(() => describe(route.params), [route.params]);
   const { withAuth, serverUrl } = useAuth();
   const [roms, setRoms] = useState<RommRom[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,9 +56,7 @@ export function RomListScreen({ route, navigation }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const result = await withAuth((url, token) =>
-        getRoms(url, token, platformId),
-      );
+      const result = await withAuth(loadRoms);
       result.sort((a, b) => a.name.localeCompare(b.name));
       setRoms(result);
     } catch (e) {
@@ -32,16 +64,16 @@ export function RomListScreen({ route, navigation }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [withAuth, platformId]);
+  }, [withAuth, loadRoms]);
 
   useEffect(() => {
-    navigation.setOptions({ title: platformName });
+    navigation.setOptions({ title });
     load();
-  }, [load, navigation, platformName]);
+  }, [load, navigation, title]);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{platformName}</Text>
+      <Text style={styles.title}>{title}</Text>
 
       {loading && (
         <ActivityIndicator
@@ -67,7 +99,7 @@ export function RomListScreen({ route, navigation }: Props) {
 
       {!loading && !error && roms.length === 0 && (
         <View style={styles.centerFill}>
-          <Text style={styles.subtitle}>No games found for this platform.</Text>
+          <Text style={styles.subtitle}>{emptyMessage}</Text>
         </View>
       )}
 

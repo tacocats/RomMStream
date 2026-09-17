@@ -45,7 +45,7 @@ describe('RootNavigator', () => {
     await renderNavigator();
 
     expect(await screen.findByTestId('main-screen')).toBeOnTheScreen();
-    expect(screen.getByText('Hello world')).toBeOnTheScreen();
+    expect(await screen.findByTestId('home-tab')).toBeOnTheScreen();
     expect(screen.queryByTestId('login-submit')).toBeNull();
   });
 });

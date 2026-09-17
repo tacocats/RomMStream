@@ -18,6 +18,7 @@ import { useAuth } from '../auth/AuthContext';
 import { FocusablePressable } from '../components/FocusablePressable';
 import { CloseIcon, SearchIcon } from '../components/icons';
 import { playerParamsFor, RomGrid } from '../components/RomGrid';
+import { platformLabelFor } from '../components/RomTile';
 import { MainNavigation } from '../navigation/types';
 import { colors } from '../theme/colors';
 
@@ -117,7 +118,7 @@ export function SearchTab({ navigation }: Props) {
   const platforms = useMemo(() => {
     const seen = new Set<string>();
     for (const rom of results ?? []) {
-      const label = rom.platform_name ?? rom.platform_slug;
+      const label = platformLabelFor(rom);
       if (label) {
         seen.add(label);
       }
@@ -129,9 +130,7 @@ export function SearchTab({ navigation }: Props) {
     if (platformFilter === ALL_PLATFORMS || !results) {
       return results;
     }
-    return results.filter(
-      rom => (rom.platform_name ?? rom.platform_slug) === platformFilter,
-    );
+    return results.filter(rom => platformLabelFor(rom) === platformFilter);
   }, [results, platformFilter]);
 
   return (

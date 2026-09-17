@@ -6,8 +6,15 @@ import {
   mockFetchOnce,
 } from '../../testUtils/fetchMock';
 import {
+  getCollections,
   getPlatforms,
+  getRecentlyAddedRoms,
+  getRecommendations,
   getRoms,
+  getRomsByCollection,
+  getRomsByVirtualCollection,
+  getStats,
+  getVirtualCollections,
   login,
   normalizeServerUrl,
   refreshAccessToken,
@@ -225,5 +232,158 @@ describe('getRoms', () => {
     mockFetchOnce({ status: 500, body: { detail: 'boom' } });
 
     await expect(getRoms(SERVER, 'tok', 1)).rejects.toThrow('boom');
+  });
+});
+
+describe('getRomsByCollection', () => {
+  it('requests roms filtered by collection_id', async () => {
+    mockFetchOnce({ body: { items: makeRoms(2, 1), total: 2 } });
+
+    const roms = await getRomsByCollection(SERVER, 'tok', 42);
+
+    expect(roms).toHaveLength(2);
+    const url = fetchUrl();
+    expect(url.pathname).toBe('/api/roms');
+    expect(url.searchParams.get('collection_id')).toBe('42');
+    expect(url.searchParams.has('platform_ids')).toBe(false);
+  });
+});
+
+describe('getRomsByVirtualCollection', () => {
+  it('requests roms filtered by virtual_collection_id', async () => {
+    mockFetchOnce({ body: { items: makeRoms(2, 1), total: 2 } });
+
+    const roms = await getRomsByVirtualCollection(SERVER, 'tok', 'zelda-1');
+
+    expect(roms).toHaveLength(2);
+    const url = fetchUrl();
+    expect(url.pathname).toBe('/api/roms');
+    expect(url.searchParams.get('virtual_collection_id')).toBe('zelda-1');
+  });
+});
+
+describe('getRecentlyAddedRoms', () => {
+  it('orders by creation date, newest first, without the gallery sidecars', async () => {
+    mockFetchOnce({ body: { items: makeRoms(5, 1), total: 5 } });
+
+    const roms = await getRecentlyAddedRoms(SERVER, 'tok');
+
+    expect(roms).toHaveLength(5);
+    const url = fetchUrl();
+    expect(url.pathname).toBe('/api/roms');
+    expect(url.searchParams.get('order_by')).toBe('created_at');
+    expect(url.searchParams.get('order_dir')).toBe('desc');
+    expect(url.searchParams.get('limit')).toBe('20');
+    expect(url.searchParams.get('with_char_index')).toBe('false');
+    expect(url.searchParams.get('with_filter_values')).toBe('false');
+    expect(url.searchParams.get('with_rom_id_index')).toBe('false');
+  });
+
+  it('honours a custom limit', async () => {
+    mockFetchOnce({ body: { items: makeRoms(3, 1), total: 3 } });
+
+    await getRecentlyAddedRoms(SERVER, 'tok', 3);
+
+    expect(fetchUrl().searchParams.get('limit')).toBe('3');
+  });
+});
+
+describe('getRecommendations', () => {
+  it('returns the ranked feed', async () => {
+    const feed = [
+      {
+        rom: { id: 1, name: 'Zelda', platform_id: 1 },
+        score: 0.9,
+        reasons: [{ facet: 'franchise', value: 'Zelda' }],
+        seed_rom_id: 5,
+        seed_rom_name: 'Ocarina of Time',
+      },
+    ];
+    mockFetchOnce({ body: feed });
+
+    await expect(getRecommendations(SERVER, 'tok')).resolves.toEqual(feed);
+
+    const url = fetchUrl();
+    expect(url.pathname).toBe('/api/recommendations');
+    expect(url.searchParams.get('limit')).toBe('20');
+    expect(fetchCall()[1]?.headers).toEqual({ Authorization: 'Bearer tok' });
+  });
+
+  it('returns an empty list for an unrecognised body', async () => {
+    mockFetchOnce({ body: { detail: 'nothing here' } });
+
+    await expect(getRecommendations(SERVER, 'tok')).resolves.toEqual([]);
+  });
+});
+
+describe('getCollections', () => {
+  it('returns the collections list', async () => {
+    const collections = [{ id: 1, name: 'Platformers', rom_count: 12 }];
+    mockFetchOnce({ body: collections });
+
+    await expect(getCollections(SERVER, 'tok')).resolves.toEqual(collections);
+    expect(fetchUrl().pathname).toBe('/api/collections');
+  });
+
+  it('returns an empty list for an unrecognised body', async () => {
+    mockFetchOnce({ body: { detail: 'nothing here' } });
+
+    await expect(getCollections(SERVER, 'tok')).resolves.toEqual([]);
+  });
+});
+
+describe('getVirtualCollections', () => {
+  it('defaults to the IGDB collection facet', async () => {
+    const collections = [{ id: 'collection-1', name: 'Zelda', rom_count: 5 }];
+    mockFetchOnce({ body: collections });
+
+    await expect(getVirtualCollections(SERVER, 'tok')).resolves.toEqual(
+      collections,
+    );
+    const url = fetchUrl();
+    expect(url.pathname).toBe('/api/collections/virtual');
+    expect(url.searchParams.get('type')).toBe('collection');
+    expect(url.searchParams.get('limit')).toBe('20');
+  });
+
+  it('honours a custom type and limit', async () => {
+    mockFetchOnce({ body: [] });
+
+    await getVirtualCollections(SERVER, 'tok', 'genre', 5);
+
+    const url = fetchUrl();
+    expect(url.searchParams.get('type')).toBe('genre');
+    expect(url.searchParams.get('limit')).toBe('5');
+  });
+
+  it('returns an empty list for an unrecognised body', async () => {
+    mockFetchOnce({ body: { detail: 'nothing here' } });
+
+    await expect(getVirtualCollections(SERVER, 'tok')).resolves.toEqual([]);
+  });
+});
+
+describe('getStats', () => {
+  it('returns the stats payload', async () => {
+    const stats = {
+      PLATFORMS: 33,
+      ROMS: 3164,
+      SAVES: 2,
+      STATES: 1,
+      SCREENSHOTS: 1,
+      TOTAL_FILESIZE_BYTES: 678972030976,
+    };
+    mockFetchOnce({ body: stats });
+
+    await expect(getStats(SERVER, 'tok')).resolves.toEqual(stats);
+    expect(fetchUrl().pathname).toBe('/api/stats');
+  });
+
+  it('propagates API errors', async () => {
+    mockFetchOnce({ status: 401, body: { detail: 'expired' } });
+
+    await expect(getStats(SERVER, 'tok')).rejects.toMatchObject({
+      status: 401,
+    });
   });
 });

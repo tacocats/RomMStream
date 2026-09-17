@@ -1,4 +1,13 @@
-import { RommApiError, RommPlatform, RommRom, TokenResponse } from './types';
+import {
+  RommApiError,
+  RommCollection,
+  RommPlatform,
+  RommRecommendation,
+  RommRom,
+  RommStats,
+  RommVirtualCollection,
+  TokenResponse,
+} from './types';
 
 // Read-only scopes are enough for browsing + launching the web player.
 const REQUESTED_SCOPES = 'me.read platforms.read roms.read collections.read';
@@ -131,10 +140,10 @@ export async function searchRoms(
   return unwrapList<RommRom>(await parseJsonOrThrow(response));
 }
 
-export async function getRoms(
+async function fetchAllRoms(
   serverUrl: string,
   accessToken: string,
-  platformId?: number,
+  extraParams: Record<string, string>,
 ): Promise<RommRom[]> {
   const roms: RommRom[] = [];
   let offset = 0;
@@ -145,7 +154,7 @@ export async function getRoms(
       offset: String(offset),
       order_by: 'name',
       order_dir: 'asc',
-      ...(platformId !== undefined ? { platform_ids: String(platformId) } : {}),
+      ...extraParams,
     });
 
     const response = await fetch(`${serverUrl}/api/roms?${params.toString()}`, {
@@ -170,4 +179,120 @@ export async function getRoms(
     }
     offset += page.length;
   }
+}
+
+export async function getRoms(
+  serverUrl: string,
+  accessToken: string,
+  platformId?: number,
+): Promise<RommRom[]> {
+  return fetchAllRoms(
+    serverUrl,
+    accessToken,
+    platformId !== undefined ? { platform_ids: String(platformId) } : {},
+  );
+}
+
+export async function getRomsByCollection(
+  serverUrl: string,
+  accessToken: string,
+  collectionId: number,
+): Promise<RommRom[]> {
+  return fetchAllRoms(serverUrl, accessToken, {
+    collection_id: String(collectionId),
+  });
+}
+
+export async function getRomsByVirtualCollection(
+  serverUrl: string,
+  accessToken: string,
+  virtualCollectionId: string,
+): Promise<RommRom[]> {
+  return fetchAllRoms(serverUrl, accessToken, {
+    virtual_collection_id: virtualCollectionId,
+  });
+}
+
+// Home screen shelves: a single, unpaginated page is enough, and the
+// char/filter/id-index sidecars that power the full gallery view would
+// otherwise walk the whole library on every load.
+const HOME_SHELF_LIMIT = 20;
+
+export async function getRecentlyAddedRoms(
+  serverUrl: string,
+  accessToken: string,
+  limit: number = HOME_SHELF_LIMIT,
+): Promise<RommRom[]> {
+  const params = new URLSearchParams({
+    order_by: 'created_at',
+    order_dir: 'desc',
+    limit: String(limit),
+    offset: '0',
+    with_char_index: 'false',
+    with_filter_values: 'false',
+    with_rom_id_index: 'false',
+  });
+
+  const response = await fetch(`${serverUrl}/api/roms?${params.toString()}`, {
+    headers: authHeaders(accessToken),
+  });
+  return unwrapList<RommRom>(await parseJsonOrThrow(response));
+}
+
+export async function getRecommendations(
+  serverUrl: string,
+  accessToken: string,
+  limit: number = HOME_SHELF_LIMIT,
+): Promise<RommRecommendation[]> {
+  const params = new URLSearchParams({ limit: String(limit) });
+
+  const response = await fetch(
+    `${serverUrl}/api/recommendations?${params.toString()}`,
+    { headers: authHeaders(accessToken) },
+  );
+  const body = await parseJsonOrThrow(response);
+  return Array.isArray(body) ? (body as RommRecommendation[]) : [];
+}
+
+export async function getCollections(
+  serverUrl: string,
+  accessToken: string,
+): Promise<RommCollection[]> {
+  const response = await fetch(`${serverUrl}/api/collections`, {
+    headers: authHeaders(accessToken),
+  });
+  const body = await parseJsonOrThrow(response);
+  return Array.isArray(body) ? (body as RommCollection[]) : [];
+}
+
+// RomM groups these on the fly by a shared metadata facet. "collection" is
+// the IGDB series/collection facet (e.g. "The Legend of Zelda Collection"),
+// the same default RomM's own UI ships with — other facets (franchise,
+// genre, mode, company) are pickier and "all" is expensive to compute.
+const DEFAULT_VIRTUAL_COLLECTION_TYPE = 'collection';
+
+export async function getVirtualCollections(
+  serverUrl: string,
+  accessToken: string,
+  type: string = DEFAULT_VIRTUAL_COLLECTION_TYPE,
+  limit: number = HOME_SHELF_LIMIT,
+): Promise<RommVirtualCollection[]> {
+  const params = new URLSearchParams({ type, limit: String(limit) });
+
+  const response = await fetch(
+    `${serverUrl}/api/collections/virtual?${params.toString()}`,
+    { headers: authHeaders(accessToken) },
+  );
+  const body = await parseJsonOrThrow(response);
+  return Array.isArray(body) ? (body as RommVirtualCollection[]) : [];
+}
+
+export async function getStats(
+  serverUrl: string,
+  accessToken: string,
+): Promise<RommStats> {
+  const response = await fetch(`${serverUrl}/api/stats`, {
+    headers: authHeaders(accessToken),
+  });
+  return (await parseJsonOrThrow(response)) as RommStats;
 }

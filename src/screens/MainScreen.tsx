@@ -51,7 +51,7 @@ export function MainScreen({ navigation }: Props) {
           </FocusablePressable>
         </View>
         <View style={styles.content}>
-          {tab === 'Home' && <HomeTab />}
+          {tab === 'Home' && <HomeTab navigation={navigation} />}
           {tab === 'Platforms' && <PlatformsTab navigation={navigation} />}
           {tab === 'Search' && <SearchTab navigation={navigation} />}
         </View>
