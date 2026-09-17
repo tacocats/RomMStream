@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   ActivityIndicator,
   StyleSheet,
@@ -10,9 +16,13 @@ import { searchRoms } from '../api/rommClient';
 import { RommRom } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { FocusablePressable } from '../components/FocusablePressable';
+import { CloseIcon, SearchIcon } from '../components/icons';
 import { playerParamsFor, RomGrid } from '../components/RomGrid';
 import { MainNavigation } from '../navigation/types';
 import { colors } from '../theme/colors';
+
+/** Platform chip meaning "don't filter by platform". */
+const ALL_PLATFORMS = null;
 
 export const MIN_QUERY_LENGTH = 2;
 export const SEARCH_DEBOUNCE_MS = 400;
@@ -28,6 +38,9 @@ export function SearchTab({ navigation }: Props) {
   const [results, setResults] = useState<RommRom[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [platformFilter, setPlatformFilter] = useState<string | null>(
+    ALL_PLATFORMS,
+  );
   // Only the most recent request may touch the state: a slow response to an
   // earlier query must not overwrite the results of a later one.
   const requestId = useRef(0);
@@ -55,6 +68,7 @@ export function SearchTab({ navigation }: Props) {
         }
         found.sort((a, b) => a.name.localeCompare(b.name));
         setResults(found);
+        setPlatformFilter(ALL_PLATFORMS);
       } catch (e) {
         if (id !== requestId.current) {
           return;
@@ -93,22 +107,103 @@ export function SearchTab({ navigation }: Props) {
     search(term);
   };
 
+  const clear = () => {
+    cancelPending();
+    setQuery('');
+  };
+
+  // Chip options are the platforms actually present in this result set, in
+  // the order they first appear — not the full library's platform list.
+  const platforms = useMemo(() => {
+    const seen = new Set<string>();
+    for (const rom of results ?? []) {
+      const label = rom.platform_name ?? rom.platform_slug;
+      if (label) {
+        seen.add(label);
+      }
+    }
+    return Array.from(seen);
+  }, [results]);
+
+  const filteredResults = useMemo(() => {
+    if (platformFilter === ALL_PLATFORMS || !results) {
+      return results;
+    }
+    return results.filter(
+      rom => (rom.platform_name ?? rom.platform_slug) === platformFilter,
+    );
+  }, [results, platformFilter]);
+
   return (
     <View style={styles.container} testID="search-tab">
       <Text style={styles.title}>Search</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Game title"
-        placeholderTextColor={colors.textMuted}
-        autoCapitalize="none"
-        autoCorrect={false}
-        returnKeyType="search"
-        value={query}
-        onChangeText={setQuery}
-        onSubmitEditing={submit}
-        hasTVPreferredFocus
-        testID="search-input"
-      />
+      <View style={styles.inputWrap}>
+        <SearchIcon color={colors.textMuted} size={18} />
+        <TextInput
+          style={styles.input}
+          placeholder="Game title"
+          placeholderTextColor={colors.textMuted}
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="search"
+          value={query}
+          onChangeText={setQuery}
+          onSubmitEditing={submit}
+          hasTVPreferredFocus
+          testID="search-input"
+        />
+        {query.length > 0 && (
+          <FocusablePressable
+            style={styles.clearButton}
+            onPress={clear}
+            testID="clear-search-button"
+          >
+            <CloseIcon color={colors.textMuted} size={14} />
+          </FocusablePressable>
+        )}
+      </View>
+
+      {!loading && !error && !tooShort && results && results.length > 0 && (
+        <View style={styles.chipRow}>
+          <FocusablePressable
+            style={[
+              styles.chip,
+              platformFilter === ALL_PLATFORMS && styles.chipActive,
+            ]}
+            onPress={() => setPlatformFilter(ALL_PLATFORMS)}
+            testID="platform-chip-all"
+          >
+            <Text
+              style={[
+                styles.chipText,
+                platformFilter === ALL_PLATFORMS && styles.chipTextActive,
+              ]}
+            >
+              All
+            </Text>
+          </FocusablePressable>
+          {platforms.map(platform => (
+            <FocusablePressable
+              key={platform}
+              style={[
+                styles.chip,
+                platformFilter === platform && styles.chipActive,
+              ]}
+              onPress={() => setPlatformFilter(platform)}
+              testID={`platform-chip-${platform}`}
+            >
+              <Text
+                style={[
+                  styles.chipText,
+                  platformFilter === platform && styles.chipTextActive,
+                ]}
+              >
+                {platform}
+              </Text>
+            </FocusablePressable>
+          ))}
+        </View>
+      )}
 
       {loading && (
         <ActivityIndicator
@@ -149,16 +244,26 @@ export function SearchTab({ navigation }: Props) {
       {!loading && !error && !tooShort && results && results.length > 0 && (
         <>
           <Text style={styles.count}>
-            {`${results.length} ${results.length === 1 ? 'game' : 'games'}`}
+            {`Results for “${term}” · ${filteredResults?.length ?? 0} ${
+              filteredResults?.length === 1 ? 'game' : 'games'
+            }`}
           </Text>
-          <RomGrid
-            roms={results}
-            serverUrl={serverUrl}
-            autoFocus={false}
-            onSelect={rom =>
-              navigation.navigate('Player', playerParamsFor(rom))
-            }
-          />
+          {filteredResults && filteredResults.length > 0 ? (
+            <RomGrid
+              roms={filteredResults}
+              serverUrl={serverUrl}
+              autoFocus={false}
+              onSelect={rom =>
+                navigation.navigate('Player', playerParamsFor(rom))
+              }
+            />
+          ) : (
+            <View style={styles.centerFill}>
+              <Text style={styles.hint}>
+                {`No ${platformFilter} games match “${term}”.`}
+              </Text>
+            </View>
+          )}
         </>
       )}
     </View>
@@ -173,16 +278,53 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: 16,
   },
-  input: {
+  inputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     borderWidth: 2,
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: 10,
     paddingHorizontal: 14,
+    maxWidth: 560,
+    marginBottom: 16,
+  },
+  input: {
+    flex: 1,
     paddingVertical: 10,
     color: colors.textPrimary,
     fontSize: 16,
-    maxWidth: 520,
-    marginBottom: 16,
+  },
+  clearButton: {
+    padding: 4,
+    borderRadius: 12,
+    backgroundColor: 'transparent',
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 20,
+  },
+  chip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: colors.surfaceSolid,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  chipActive: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  chipText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  chipTextActive: {
+    color: colors.textPrimary,
   },
   centerFill: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   hint: { fontSize: 16, color: colors.textMuted, textAlign: 'center' },

@@ -75,5 +75,9 @@ jest.mock('react-native-svg', () => {
     Svg,
     Path: mockComponent('svg-path'),
     SvgXml: mockComponent('svg-xml'),
+    Defs: mockComponent('svg-defs'),
+    LinearGradient: mockComponent('svg-linear-gradient'),
+    Stop: mockComponent('svg-stop'),
+    Rect: mockComponent('svg-rect'),
   };
 });

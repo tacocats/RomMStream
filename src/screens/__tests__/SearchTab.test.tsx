@@ -61,7 +61,9 @@ describe('SearchTab', () => {
       'access-token',
       'zelda',
     );
-    expect(await screen.findByText('2 games')).toBeOnTheScreen();
+    expect(
+      await screen.findByText('Results for “zelda” · 2 games'),
+    ).toBeOnTheScreen();
     const tiles = screen.getAllByTestId(/^rom-tile-/);
     expect(tiles.map(tile => tile.props.testID)).toEqual([
       'rom-tile-2',
@@ -87,7 +89,9 @@ describe('SearchTab', () => {
       'access-token',
       'zel',
     );
-    expect(await screen.findByText('1 game')).toBeOnTheScreen();
+    expect(
+      await screen.findByText('Results for “zel” · 1 game'),
+    ).toBeOnTheScreen();
   });
 
   it('does not search for fewer than two characters', async () => {
@@ -151,6 +155,50 @@ describe('SearchTab', () => {
     expect(screen.getByTestId('rom-tile-2')).toBeOnTheScreen();
     expect(screen.queryByTestId('rom-tile-1')).toBeNull();
     expect(mockedSearchRoms).toHaveBeenCalledTimes(2);
+  });
+
+  it('filters results by platform chip', async () => {
+    mockedSearchRoms.mockResolvedValueOnce([...RESULTS]);
+    await renderTab().rendered;
+
+    await submitQuery('zelda');
+    expect(await screen.findByTestId('rom-tile-1')).toBeOnTheScreen();
+
+    expect(screen.getByTestId('platform-chip-all')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId('platform-chip-nes'));
+
+    expect(screen.getByText('Results for “zelda” · 1 game')).toBeOnTheScreen();
+    expect(screen.getByTestId('rom-tile-1')).toBeOnTheScreen();
+    expect(screen.queryByTestId('rom-tile-2')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('platform-chip-all'));
+    expect(screen.getByTestId('rom-tile-2')).toBeOnTheScreen();
+  });
+
+  it('resets the platform filter on a new search', async () => {
+    mockedSearchRoms.mockResolvedValueOnce([...RESULTS]);
+    await renderTab().rendered;
+    await submitQuery('zelda');
+    await fireEvent.press(await screen.findByTestId('platform-chip-nes'));
+    expect(screen.queryByTestId('rom-tile-2')).toBeNull();
+
+    mockedSearchRoms.mockResolvedValueOnce([...RESULTS]);
+    await submitQuery('link');
+
+    expect(await screen.findByTestId('rom-tile-2')).toBeOnTheScreen();
+    expect(screen.getByTestId('rom-tile-1')).toBeOnTheScreen();
+  });
+
+  it('clears the query with the clear button', async () => {
+    await renderTab().rendered;
+
+    await fireEvent.changeText(screen.getByTestId('search-input'), 'zelda');
+    expect(screen.getByTestId('clear-search-button')).toBeOnTheScreen();
+
+    await fireEvent.press(screen.getByTestId('clear-search-button'));
+
+    expect(screen.getByTestId('search-input').props.value).toBe('');
+    expect(screen.queryByTestId('clear-search-button')).toBeNull();
   });
 
   it('opens the player for a result', async () => {

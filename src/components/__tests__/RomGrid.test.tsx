@@ -55,9 +55,8 @@ describe('RomGrid', () => {
       uri: 'https://cdn.example/m.png',
     });
     expect(screen.queryByTestId('rom-cover-3')).toBeNull();
-    expect(screen.getByTestId('rom-cover-placeholder-3')).toHaveTextContent(
-      'Metroid',
-    );
+    expect(screen.getByTestId('rom-cover-placeholder-3')).toBeOnTheScreen();
+    expect(screen.getByTestId('rom-tile-3')).toHaveTextContent('Metroid');
   });
 
   it('reports the rom whose tile was pressed', async () => {
