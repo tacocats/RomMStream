@@ -51,8 +51,31 @@ function buildLoginScript(loginPath: string, username: string, password: string)
 // remote shouldn't have to scroll a web page to start the game. A button
 // simply labelled "Play" is the last resort. On pages without one (the plain
 // rom page fallback) this gives up after a while.
+//
+// EmulatorJS also draws an on-screen touch gamepad whenever the device
+// reports a touchscreen (Android TV does), which is just clutter on a TV.
+// It's switched off through EmulatorJS's own "virtual-gamepad" setting once
+// the emulator object exists (EmulatorJS persists that in localStorage), with
+// a CSS rule injected up front so it never flashes on screen before then.
 const AUTO_PLAY_SCRIPT = `
   (function () {
+    var style = document.createElement('style');
+    style.textContent = '.ejs_virtualGamepad_parent { display: none !important; }';
+    document.head.appendChild(style);
+
+    var disableTouchGamepad = function () {
+      var tries = 0;
+      var timer = setInterval(function () {
+        var ejs = window.EJS_emulator;
+        if (ejs && typeof ejs.changeSettingOption === 'function') {
+          clearInterval(timer);
+          try { ejs.changeSettingOption('virtual-gamepad', 'disabled'); } catch (e) {}
+        } else if (++tries > 300) {
+          clearInterval(timer);
+        }
+      }, 200);
+    };
+
     var findPlayButton = function () {
       var byClass = document.querySelector('button.play-button, button.r-v2-ejs__play');
       if (byClass) { return byClass; }
@@ -68,6 +91,7 @@ const AUTO_PLAY_SCRIPT = `
       if (btn) {
         clearInterval(timer);
         btn.click();
+        disableTouchGamepad();
       } else if (++tries > 150) {
         clearInterval(timer);
       }

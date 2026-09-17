@@ -50,8 +50,11 @@ EmulatorJS core open `/rom/{id}/ejs`, Flash/browser games open
 `/rom/{id}/pico8`, and anything else falls back to the rom page `/rom/{id}`.
 RomM's player routes land on a pre-play lobby (saves/states picker) whose
 Play button only appears once the rom has loaded; the player screen injects
-a small script that presses it (`button.play-button`) so the game starts
-without scrolling a web page with a remote.
+a small script that presses it (`.play-button` in the v1 UI,
+`.r-v2-ejs__play` in v2) so the game starts without scrolling a web page with
+a remote. The same script turns off EmulatorJS's on-screen touch gamepad via
+its `virtual-gamepad` setting (Android TV reports a touchscreen, so
+EmulatorJS would otherwise draw one), with a CSS rule as a fallback.
 
 The EmulatorJS platform list is a snapshot of RomM's `_EJS_CORES_MAP` in
 `src/settings/settingsStore.ts`; if a newly supported platform lands on the
