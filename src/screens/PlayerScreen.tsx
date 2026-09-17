@@ -44,6 +44,28 @@ function buildLoginScript(loginPath: string, username: string, password: string)
   `;
 }
 
+// RomM's web player routes land on a pre-play lobby (saves/states picker)
+// with a Play button (`v-btn.play-button` in views/Player/EmulatorJS/Base.vue)
+// that only appears once the rom has loaded. Its handler needs no user
+// gesture, so press it for the user: a TV remote shouldn't have to scroll
+// a web page to start the game. On pages without the button (the plain rom
+// page fallback) this simply gives up after a while.
+const AUTO_PLAY_SCRIPT = `
+  (function () {
+    var tries = 0;
+    var timer = setInterval(function () {
+      var btn = document.querySelector('button.play-button');
+      if (btn) {
+        clearInterval(timer);
+        btn.click();
+      } else if (++tries > 150) {
+        clearInterval(timer);
+      }
+    }, 200);
+  })();
+  true;
+`;
+
 function describeLoginFailure(status: number | undefined, loginPath: string, error?: string): string {
   if (status === 401) {
     return 'RomM rejected the username/password. Sign out and sign in again.';
@@ -125,12 +147,15 @@ export function PlayerScreen({ route, navigation }: Props) {
         style={styles.webview}
         source={{ uri: step === 'logging-in' ? `${serverUrl}${BOOTSTRAP_PATH}` : playUrl }}
         injectedJavaScript={
-          step === 'logging-in' ? buildLoginScript(loginPath, username, password) : undefined
+          step === 'logging-in'
+            ? buildLoginScript(loginPath, username, password)
+            : AUTO_PLAY_SCRIPT
         }
         onMessage={handleMessage}
         onError={syntheticEvent => {
           setLoadError(syntheticEvent.nativeEvent.description || 'Failed to load the web player');
         }}
+        webviewDebuggingEnabled={__DEV__}
         sharedCookiesEnabled
         thirdPartyCookiesEnabled
         javaScriptEnabled
