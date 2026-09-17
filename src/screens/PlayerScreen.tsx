@@ -45,16 +45,26 @@ function buildLoginScript(loginPath: string, username: string, password: string)
 }
 
 // RomM's web player routes land on a pre-play lobby (saves/states picker)
-// with a Play button (`v-btn.play-button` in views/Player/EmulatorJS/Base.vue)
-// that only appears once the rom has loaded. Its handler needs no user
-// gesture, so press it for the user: a TV remote shouldn't have to scroll
-// a web page to start the game. On pages without the button (the plain rom
-// page fallback) this simply gives up after a while.
+// with a Play button that only appears once the rom has loaded: `.play-button`
+// in the v1 UI (views/Player/EmulatorJS/Base.vue), `.r-v2-ejs__play` in the
+// v2 UI. Its handler needs no user gesture, so press it for the user: a TV
+// remote shouldn't have to scroll a web page to start the game. A button
+// simply labelled "Play" is the last resort. On pages without one (the plain
+// rom page fallback) this gives up after a while.
 const AUTO_PLAY_SCRIPT = `
   (function () {
+    var findPlayButton = function () {
+      var byClass = document.querySelector('button.play-button, button.r-v2-ejs__play');
+      if (byClass) { return byClass; }
+      var buttons = document.querySelectorAll('button');
+      for (var i = 0; i < buttons.length; i++) {
+        if (buttons[i].textContent.trim().toLowerCase() === 'play') { return buttons[i]; }
+      }
+      return null;
+    };
     var tries = 0;
     var timer = setInterval(function () {
-      var btn = document.querySelector('button.play-button');
+      var btn = findPlayButton();
       if (btn) {
         clearInterval(timer);
         btn.click();
