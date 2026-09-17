@@ -9,7 +9,7 @@ import {
 import { RommRom } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { FocusablePressable } from '../components/FocusablePressable';
-import { playerParamsFor, RomGrid } from '../components/RomGrid';
+import { gameDetailsParamsFor, RomGrid } from '../components/RomGrid';
 import { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 
@@ -107,7 +107,9 @@ export function RomListScreen({ route, navigation }: Props) {
         <RomGrid
           roms={roms}
           serverUrl={serverUrl}
-          onSelect={rom => navigation.navigate('Player', playerParamsFor(rom))}
+          onSelect={rom =>
+            navigation.navigate('GameDetails', gameDetailsParamsFor(rom))
+          }
         />
       )}
     </View>

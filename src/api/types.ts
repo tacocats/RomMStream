@@ -57,6 +57,31 @@ export interface RommVirtualCollection {
   [key: string]: unknown;
 }
 
+/** RomM's source-agnostic aggregate of a rom's metadata (IGDB and others),
+ * already merged and sorted server-side — see `RommRomDetail.metadatum`. */
+export interface RommRomMetadata {
+  genres: string[];
+  franchises: string[];
+  collections: string[];
+  companies: string[];
+  publishers: string[];
+  developers: string[];
+  game_modes: string[];
+  age_ratings: string[];
+  player_count: string;
+  first_release_date: number | null;
+  average_rating: number | null;
+}
+
+/** Full rom detail, as returned by GET /api/roms/{id}. */
+export interface RommRomDetail extends RommRom {
+  summary?: string | null;
+  regions?: string[];
+  languages?: string[];
+  is_identified?: boolean;
+  metadatum?: RommRomMetadata;
+}
+
 export interface RommRecommendationReason {
   facet: string;
   value: string;

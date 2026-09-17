@@ -42,13 +42,24 @@ export function RomGrid({
   );
 }
 
-/** Route params for opening a rom in the web player. */
-export function playerParamsFor(rom: RommRom): RootStackParamList['Player'] {
+function romRouteParams(rom: RommRom) {
   return {
     romId: rom.id,
     romName: rom.name,
     platformSlug: rom.platform_slug ?? '',
   };
+}
+
+/** Route params for opening a rom's details screen. */
+export function gameDetailsParamsFor(
+  rom: RommRom,
+): RootStackParamList['GameDetails'] {
+  return romRouteParams(rom);
+}
+
+/** Route params for opening a rom directly in the web player. */
+export function playerParamsFor(rom: RommRom): RootStackParamList['Player'] {
+  return romRouteParams(rom);
 }
 
 export { resolveCoverUrl };

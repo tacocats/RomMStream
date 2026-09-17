@@ -64,14 +64,14 @@ describe('RomListScreen', () => {
     ]);
   });
 
-  it('opens the player for a rom', async () => {
+  it('opens the details screen for a rom', async () => {
     mockedGetRoms.mockResolvedValueOnce([...ROMS]);
     const { navigation, rendered } = renderScreen();
     await rendered;
 
     await fireEvent.press(await screen.findByTestId('rom-tile-3'));
 
-    expect(navigation.navigate).toHaveBeenCalledWith('Player', {
+    expect(navigation.navigate).toHaveBeenCalledWith('GameDetails', {
       romId: 3,
       romName: 'Metroid',
       platformSlug: '',

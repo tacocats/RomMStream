@@ -23,7 +23,7 @@ import {
 import { useAuth } from '../auth/AuthContext';
 import { CollectionShelf } from '../components/CollectionShelf';
 import { FocusablePressable } from '../components/FocusablePressable';
-import { playerParamsFor } from '../components/RomGrid';
+import { gameDetailsParamsFor } from '../components/RomGrid';
 import { RomShelf } from '../components/RomShelf';
 import { VirtualCollectionShelf } from '../components/VirtualCollectionShelf';
 import { MainNavigation } from '../navigation/types';
@@ -206,7 +206,7 @@ export function HomeTab({ navigation }: Props) {
             serverUrl={serverUrl}
             autoFocus
             onSelect={rom =>
-              navigation.navigate('Player', playerParamsFor(rom))
+              navigation.navigate('GameDetails', gameDetailsParamsFor(rom))
             }
             testID="home-recent"
           />
@@ -216,7 +216,7 @@ export function HomeTab({ navigation }: Props) {
             roms={recommendedRoms}
             serverUrl={serverUrl}
             onSelect={rom =>
-              navigation.navigate('Player', playerParamsFor(rom))
+              navigation.navigate('GameDetails', gameDetailsParamsFor(rom))
             }
             subtitleFor={rom => reasonByRomId.get(rom.id)}
             testID="home-recommended"

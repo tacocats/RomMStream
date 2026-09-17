@@ -10,6 +10,7 @@ import {
   getPlatforms,
   getRecentlyAddedRoms,
   getRecommendations,
+  getRom,
   getRoms,
   getRomsByCollection,
   getRomsByVirtualCollection,
@@ -162,6 +163,32 @@ describe('getPlatforms', () => {
 
     await expect(getPlatforms(SERVER, 'tok')).rejects.toMatchObject({
       status: 401,
+    });
+  });
+});
+
+describe('getRom', () => {
+  it('requests a single rom by id', async () => {
+    const rom = {
+      id: 5,
+      name: 'Zelda',
+      platform_id: 1,
+      summary: 'An adventure.',
+    };
+    mockFetchOnce({ body: rom });
+
+    await expect(getRom(SERVER, 'tok', 5)).resolves.toEqual(rom);
+
+    const [url, init] = fetchCall();
+    expect(url).toBe(`${SERVER}/api/roms/5`);
+    expect(init?.headers).toEqual({ Authorization: 'Bearer tok' });
+  });
+
+  it('propagates a 404', async () => {
+    mockFetchOnce({ status: 404, body: { detail: 'Rom not found' } });
+
+    await expect(getRom(SERVER, 'tok', 999)).rejects.toMatchObject({
+      status: 404,
     });
   });
 });

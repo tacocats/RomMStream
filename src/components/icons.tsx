@@ -53,6 +53,27 @@ export function SearchIcon({ color, size = 18 }: IconProps) {
   );
 }
 
+export function PlayIcon({ color, size = 18 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M7 4.5v15l13-7.5-13-7.5Z" fill={color} />
+    </Svg>
+  );
+}
+
+export function VerifiedIcon({ color, size = 18 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M9.5 12.5 11 14l3.5-4M12 3l2.2 1.3 2.6-.1 1.3 2.2 2.2 1.3-.1 2.6 1.3 2.2-1.3 2.2.1 2.6-2.2 1.3-1.3 2.2-2.6-.1L12 21l-2.2-1.3-2.6.1-1.3-2.2-2.2-1.3.1-2.6L2.5 11.5l1.3-2.2-.1-2.6 2.2-1.3L7.2 3.2l2.6.1L12 3Z"
+        stroke={color}
+        strokeWidth={1.6}
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
 export function CloseIcon({ color, size = 18 }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">

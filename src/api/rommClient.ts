@@ -4,6 +4,7 @@ import {
   RommPlatform,
   RommRecommendation,
   RommRom,
+  RommRomDetail,
   RommStats,
   RommVirtualCollection,
   TokenResponse,
@@ -138,6 +139,17 @@ export async function searchRoms(
     headers: authHeaders(accessToken),
   });
   return unwrapList<RommRom>(await parseJsonOrThrow(response));
+}
+
+export async function getRom(
+  serverUrl: string,
+  accessToken: string,
+  romId: number,
+): Promise<RommRomDetail> {
+  const response = await fetch(`${serverUrl}/api/roms/${romId}`, {
+    headers: authHeaders(accessToken),
+  });
+  return (await parseJsonOrThrow(response)) as RommRomDetail;
 }
 
 async function fetchAllRoms(

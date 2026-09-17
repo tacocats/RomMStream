@@ -201,7 +201,7 @@ describe('SearchTab', () => {
     expect(screen.queryByTestId('clear-search-button')).toBeNull();
   });
 
-  it('opens the player for a result', async () => {
+  it('opens the details screen for a result', async () => {
     mockedSearchRoms.mockResolvedValueOnce([...RESULTS]);
     const { navigation, rendered } = renderTab();
     await rendered;
@@ -209,7 +209,7 @@ describe('SearchTab', () => {
     await submitQuery('zelda');
     await fireEvent.press(await screen.findByTestId('rom-tile-1'));
 
-    expect(navigation.navigate).toHaveBeenCalledWith('Player', {
+    expect(navigation.navigate).toHaveBeenCalledWith('GameDetails', {
       romId: 1,
       romName: 'Zelda II',
       platformSlug: 'nes',

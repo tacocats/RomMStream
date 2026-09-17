@@ -8,6 +8,7 @@ export type RootStackParamList = {
     | { platformId: number; platformName: string }
     | { collectionId: number; collectionName: string }
     | { virtualCollectionId: string; virtualCollectionName: string };
+  GameDetails: { romId: number; romName: string; platformSlug: string };
   Player: { romId: number; romName: string; platformSlug: string };
   Settings: undefined;
 };

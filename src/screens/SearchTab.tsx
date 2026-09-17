@@ -17,7 +17,7 @@ import { RommRom } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { FocusablePressable } from '../components/FocusablePressable';
 import { CloseIcon, SearchIcon } from '../components/icons';
-import { playerParamsFor, RomGrid } from '../components/RomGrid';
+import { gameDetailsParamsFor, RomGrid } from '../components/RomGrid';
 import { platformLabelFor } from '../components/RomTile';
 import { MainNavigation } from '../navigation/types';
 import { colors } from '../theme/colors';
@@ -253,7 +253,7 @@ export function SearchTab({ navigation }: Props) {
               serverUrl={serverUrl}
               autoFocus={false}
               onSelect={rom =>
-                navigation.navigate('Player', playerParamsFor(rom))
+                navigation.navigate('GameDetails', gameDetailsParamsFor(rom))
               }
             />
           ) : (

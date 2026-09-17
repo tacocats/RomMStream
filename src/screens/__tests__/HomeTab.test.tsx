@@ -94,7 +94,7 @@ describe('HomeTab', () => {
     expect(screen.getByText('632.4 GB')).toBeOnTheScreen();
   });
 
-  it('shows the recently added shelf and opens the player for a rom', async () => {
+  it('shows the recently added shelf and opens the details screen for a rom', async () => {
     const { navigation, rendered } = renderTab();
     await rendered;
 
@@ -104,7 +104,7 @@ describe('HomeTab', () => {
 
     await fireEvent.press(screen.getByTestId('home-recent-tile-1'));
 
-    expect(navigation.navigate).toHaveBeenCalledWith('Player', {
+    expect(navigation.navigate).toHaveBeenCalledWith('GameDetails', {
       romId: 1,
       romName: 'Wild West Shootout',
       platformSlug: 'wii',
