@@ -2,17 +2,77 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
+import {
+  getConfig,
+  getHeartbeat,
+  getRom,
+  getStreamingConfig,
+} from '../api/rommClient';
+import { RommRomDetail } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { RootStackParamList } from '../navigation/types';
 import {
+  AUTO_PLAY_PATH,
   buildPlayPath,
   getInBrowserPlayEnabled,
   getLoginPath,
   getPlayPathTemplate,
 } from '../settings/settingsStore';
 import { colors } from '../theme/colors';
+import { Heartbeat, playPath, Rom, StreamingConfig } from '../utils/playPath';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Player'>;
+
+type WithAuth = ReturnType<typeof useAuth>['withAuth'];
+
+const NOTHING_DISABLED: Heartbeat = { EMULATION: {} };
+const NO_STREAMING: StreamingConfig = { enabled: false, containers: [] };
+
+function toPlayPathRom(rom: RommRomDetail, platformSlug: string): Rom {
+  return {
+    id: rom.id,
+    platform_slug: rom.platform_slug ?? platformSlug,
+    // Releases before this field existed still have the file; refusing to
+    // launch would be worse than trying and landing on the rom page.
+    has_file_on_disk: rom.has_file_on_disk ?? true,
+    fs_extension: rom.fs_extension,
+    fs_name: rom.fs_name,
+  };
+}
+
+// Which route a rom can take is the server's answer, not something the app
+// can work out from the platform slug alone: the install decides which web
+// players are switched off (heartbeat), how platform slugs are remapped
+// (config), and which platforms have a streaming container. Each lookup can
+// be missing — /api/streaming/config only exists on RomM releases with the
+// streaming feature — so a failure degrades to "nothing disabled, no
+// streaming" instead of blocking the launch.
+async function resolveAutoPlayPath(
+  withAuth: WithAuth,
+  romId: number,
+  platformSlug: string,
+  inBrowserPlayEnabled: boolean,
+): Promise<string> {
+  const [rom, heartbeat, config, streaming] = await Promise.all([
+    withAuth((url, token) => getRom(url, token, romId)).catch(() => null),
+    withAuth((url, token) => getHeartbeat(url, token)).catch(
+      () => NOTHING_DISABLED,
+    ),
+    withAuth((url, token) => getConfig(url, token)).catch(() => undefined),
+    withAuth((url, token) => getStreamingConfig(url, token)).catch(
+      () => NO_STREAMING,
+    ),
+  ]);
+
+  const path = playPath(rom && toPlayPathRom(rom, platformSlug), {
+    heartbeat,
+    config,
+    streaming,
+    inBrowserPlayEnabled,
+  });
+
+  return path ?? `/rom/${romId}`;
+}
 
 type Step = 'logging-in' | 'ready';
 
@@ -130,7 +190,7 @@ function describeLoginFailure(
 
 export function PlayerScreen({ route }: Props) {
   const { romId, platformSlug } = route.params;
-  const { serverUrl, username, password } = useAuth();
+  const { serverUrl, username, password, withAuth } = useAuth();
   const [playUrl, setPlayUrl] = useState<string | null>(null);
   const [loginPath, setLoginPath] = useState<string | null>(null);
   const [step, setStep] = useState<Step>('logging-in');
@@ -141,17 +201,20 @@ export function PlayerScreen({ route }: Props) {
       getPlayPathTemplate(),
       getLoginPath(),
       getInBrowserPlayEnabled(),
-    ]).then(([template, login, inBrowserPlayEnabled]) => {
-      setPlayUrl(
-        `${serverUrl}${buildPlayPath(
-          template,
-          { id: romId, platformSlug },
-          inBrowserPlayEnabled,
-        )}`,
-      );
-      setLoginPath(login);
-    });
-  }, [serverUrl, romId, platformSlug]);
+    ])
+      .then(async ([template, login, inBrowserPlayEnabled]) => {
+        setLoginPath(login);
+        return template === AUTO_PLAY_PATH
+          ? resolveAutoPlayPath(
+              withAuth,
+              romId,
+              platformSlug,
+              inBrowserPlayEnabled,
+            )
+          : buildPlayPath(template, romId);
+      })
+      .then(path => setPlayUrl(`${serverUrl}${path}`));
+  }, [serverUrl, romId, platformSlug, withAuth]);
 
   const handleMessage = (event: WebViewMessageEvent) => {
     if (step !== 'logging-in' || !loginPath) {

@@ -1,5 +1,11 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import React from 'react';
+import {
+  getConfig,
+  getHeartbeat,
+  getRom,
+  getStreamingConfig,
+} from '../../api/rommClient';
 import { useAuth } from '../../auth/AuthContext';
 import {
   setInBrowserPlayEnabled,
@@ -11,8 +17,13 @@ import { createScreenProps } from '../../testUtils/navigation';
 import { PlayerScreen } from '../PlayerScreen';
 
 jest.mock('../../auth/AuthContext');
+jest.mock('../../api/rommClient');
 
 const mockedUseAuth = jest.mocked(useAuth);
+const mockedGetRom = jest.mocked(getRom);
+const mockedGetHeartbeat = jest.mocked(getHeartbeat);
+const mockedGetConfig = jest.mocked(getConfig);
+const mockedGetStreamingConfig = jest.mocked(getStreamingConfig);
 
 const SERVER = 'https://romm.test';
 
@@ -20,7 +31,18 @@ function loginMessage(payload: unknown) {
   return { nativeEvent: { data: JSON.stringify(payload) } };
 }
 
-async function renderPlayer(platformSlug = 'snes') {
+async function renderPlayer(platformSlug = 'snes', { romFails = false } = {}) {
+  if (romFails) {
+    mockedGetRom.mockRejectedValue(new Error('500'));
+  } else {
+    mockedGetRom.mockResolvedValue({
+      id: 5,
+      name: 'Zelda',
+      platform_id: 1,
+      platform_slug: platformSlug,
+      has_file_on_disk: true,
+    });
+  }
   const screenProps = createScreenProps('Player', {
     romId: 5,
     romName: 'Zelda',
@@ -31,6 +53,16 @@ async function renderPlayer(platformSlug = 'snes') {
   return { ...screenProps, webview };
 }
 
+/** Sign in, then hand back the WebView showing the game. */
+async function signIn(webview: ReturnType<typeof screen.getByTestId>) {
+  await fireEvent(
+    webview,
+    'message',
+    loginMessage({ type: 'login', ok: true, status: 200 }),
+  );
+  return screen.getByTestId('player-webview');
+}
+
 beforeEach(() => {
   mockedUseAuth.mockReturnValue(
     createAuthValue({
@@ -39,6 +71,12 @@ beforeEach(() => {
       password: 'p@ss',
     }),
   );
+  mockedGetHeartbeat.mockResolvedValue({ EMULATION: {} });
+  mockedGetConfig.mockResolvedValue({});
+  mockedGetStreamingConfig.mockResolvedValue({
+    enabled: false,
+    containers: [],
+  });
 });
 
 describe('PlayerScreen', () => {
@@ -56,30 +94,76 @@ describe('PlayerScreen', () => {
   it('opens the web player for the rom once the login succeeds', async () => {
     const { webview } = await renderPlayer('snes');
 
-    await fireEvent(
-      webview,
-      'message',
-      loginMessage({ type: 'login', ok: true, status: 200 }),
-    );
+    const player = await signIn(webview);
 
-    const player = screen.getByTestId('player-webview');
     expect(player.props.source).toEqual({ uri: `${SERVER}/rom/5/ejs` });
     expect(player.props.injectedJavaScript).not.toContain('/api/login');
     expect(player.props.injectedJavaScript).toContain('play-button');
     expect(screen.queryByText(/Signing in/)).toBeNull();
   });
 
+  it('prefers the stream when the platform has a streaming container', async () => {
+    mockedGetStreamingConfig.mockResolvedValue({
+      enabled: true,
+      containers: [{ platform: 'snes', container: 'romm-snes' }],
+    });
+    const { webview } = await renderPlayer('snes');
+
+    expect((await signIn(webview)).props.source).toEqual({
+      uri: `${SERVER}/rom/5/stream`,
+    });
+  });
+
+  it('honours an emulator the server has switched off', async () => {
+    mockedGetHeartbeat.mockResolvedValue({
+      EMULATION: { DISABLE_EMULATOR_JS: true },
+    });
+    const { webview } = await renderPlayer('snes');
+
+    expect((await signIn(webview)).props.source).toEqual({
+      uri: `${SERVER}/rom/5`,
+    });
+  });
+
+  it('still launches when the server lookups fail', async () => {
+    // An older RomM has no /api/streaming/config; that must not stop the
+    // launch, it just leaves streaming off.
+    mockedGetStreamingConfig.mockRejectedValue(new Error('404'));
+    mockedGetHeartbeat.mockRejectedValue(new Error('404'));
+    mockedGetConfig.mockRejectedValue(new Error('404'));
+    const { webview } = await renderPlayer('snes');
+
+    expect((await signIn(webview)).props.source).toEqual({
+      uri: `${SERVER}/rom/5/ejs`,
+    });
+  });
+
+  it('falls back to the plain rom page when the rom lookup fails', async () => {
+    const { webview } = await renderPlayer('snes', { romFails: true });
+
+    expect((await signIn(webview)).props.source).toEqual({
+      uri: `${SERVER}/rom/5`,
+    });
+  });
+
+  it('keeps streaming on offer when in-browser play is disabled', async () => {
+    await setInBrowserPlayEnabled(false);
+    mockedGetStreamingConfig.mockResolvedValue({
+      enabled: true,
+      containers: [{ platform: 'snes', container: 'romm-snes' }],
+    });
+    const { webview } = await renderPlayer('snes');
+
+    expect((await signIn(webview)).props.source).toEqual({
+      uri: `${SERVER}/rom/5/stream`,
+    });
+  });
+
   it('falls back to the plain rom page when in-browser play is disabled', async () => {
     await setInBrowserPlayEnabled(false);
     const { webview } = await renderPlayer('snes');
 
-    await fireEvent(
-      webview,
-      'message',
-      loginMessage({ type: 'login', ok: true }),
-    );
-
-    expect(screen.getByTestId('player-webview').props.source).toEqual({
+    expect((await signIn(webview)).props.source).toEqual({
       uri: `${SERVER}/rom/5`,
     });
   });
@@ -91,15 +175,10 @@ describe('PlayerScreen', () => {
 
     expect(webview.props.injectedJavaScript).toContain('fetch("/custom/login"');
 
-    await fireEvent(
-      webview,
-      'message',
-      loginMessage({ type: 'login', ok: true }),
-    );
-
-    expect(screen.getByTestId('player-webview').props.source).toEqual({
+    expect((await signIn(webview)).props.source).toEqual({
       uri: `${SERVER}/rom/5`,
     });
+    expect(mockedGetStreamingConfig).not.toHaveBeenCalled();
   });
 
   it('ignores messages that are not login results', async () => {

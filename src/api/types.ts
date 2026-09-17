@@ -26,6 +26,8 @@ export interface RommRom {
   platform_name?: string;
   platform_display_name?: string;
   fs_name?: string;
+  fs_extension?: string;
+  has_file_on_disk?: boolean;
   url_cover?: string;
   [key: string]: unknown;
 }

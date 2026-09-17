@@ -1,3 +1,4 @@
+import { Config, Heartbeat, StreamingConfig } from '../utils/playPath';
 import {
   RommApiError,
   RommCollection,
@@ -307,4 +308,48 @@ export async function getStats(
     headers: authHeaders(accessToken),
   });
   return (await parseJsonOrThrow(response)) as RommStats;
+}
+
+// The three lookups RomM's own Play button consults before picking a route.
+// Only the fields the play-path resolver reads are modelled; the EMULATION
+// block is normalised so a response without it can't crash the resolver.
+export async function getHeartbeat(
+  serverUrl: string,
+  accessToken: string,
+): Promise<Heartbeat> {
+  const response = await fetch(`${serverUrl}/api/heartbeat`, {
+    headers: authHeaders(accessToken),
+  });
+  const body = (await parseJsonOrThrow(response)) as Partial<Heartbeat> | null;
+  return { EMULATION: body?.EMULATION ?? {} };
+}
+
+export async function getConfig(
+  serverUrl: string,
+  accessToken: string,
+): Promise<Config> {
+  const response = await fetch(`${serverUrl}/api/config`, {
+    headers: authHeaders(accessToken),
+  });
+  return ((await parseJsonOrThrow(response)) ?? {}) as Config;
+}
+
+export async function getStreamingConfig(
+  serverUrl: string,
+  accessToken: string,
+): Promise<StreamingConfig> {
+  const response = await fetch(`${serverUrl}/api/streaming/config`, {
+    headers: {
+      ...authHeaders(accessToken),
+      Accept: 'application/json',
+      'Cache-Control': 'no-cache',
+    },
+  });
+  const body = (await parseJsonOrThrow(
+    response,
+  )) as Partial<StreamingConfig> | null;
+  return {
+    enabled: body?.enabled ?? false,
+    containers: body?.containers ?? [],
+  };
 }

@@ -7,6 +7,8 @@ import {
 } from '../../testUtils/fetchMock';
 import {
   getCollections,
+  getConfig,
+  getHeartbeat,
   getPlatforms,
   getRecentlyAddedRoms,
   getRecommendations,
@@ -15,6 +17,7 @@ import {
   getRomsByCollection,
   getRomsByVirtualCollection,
   getStats,
+  getStreamingConfig,
   getVirtualCollections,
   login,
   normalizeServerUrl,
@@ -411,6 +414,65 @@ describe('getStats', () => {
 
     await expect(getStats(SERVER, 'tok')).rejects.toMatchObject({
       status: 401,
+    });
+  });
+});
+
+describe('getHeartbeat', () => {
+  it('returns the emulation flags', async () => {
+    mockFetchOnce({ body: { EMULATION: { DISABLE_JSDOS: true } } });
+
+    await expect(getHeartbeat(SERVER, 'tok')).resolves.toEqual({
+      EMULATION: { DISABLE_JSDOS: true },
+    });
+    expect(fetchUrl().pathname).toBe('/api/heartbeat');
+  });
+
+  it('fills in an empty emulation block when the server omits it', async () => {
+    mockFetchOnce({ body: { VERSION: '4.1.0' } });
+
+    await expect(getHeartbeat(SERVER, 'tok')).resolves.toEqual({
+      EMULATION: {},
+    });
+  });
+});
+
+describe('getConfig', () => {
+  it('returns the config payload', async () => {
+    const config = { PLATFORMS_VERSIONS: { 'snes-clone': 'snes' } };
+    mockFetchOnce({ body: config });
+
+    await expect(getConfig(SERVER, 'tok')).resolves.toEqual(config);
+    expect(fetchUrl().pathname).toBe('/api/config');
+  });
+});
+
+describe('getStreamingConfig', () => {
+  it('returns the configured containers', async () => {
+    const streaming = {
+      enabled: true,
+      containers: [{ platform: 'ps2', container: 'romm-pcsx2' }],
+    };
+    mockFetchOnce({ body: streaming });
+
+    await expect(getStreamingConfig(SERVER, 'tok')).resolves.toEqual(streaming);
+    expect(fetchUrl().pathname).toBe('/api/streaming/config');
+  });
+
+  it('defaults to streaming off for a partial payload', async () => {
+    mockFetchOnce({ body: {} });
+
+    await expect(getStreamingConfig(SERVER, 'tok')).resolves.toEqual({
+      enabled: false,
+      containers: [],
+    });
+  });
+
+  it('propagates API errors', async () => {
+    mockFetchOnce({ status: 404, body: { detail: 'Not Found' } });
+
+    await expect(getStreamingConfig(SERVER, 'tok')).rejects.toMatchObject({
+      status: 404,
     });
   });
 });
