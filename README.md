@@ -220,3 +220,7 @@ Many self-hosted RomM instances run over plain HTTP on a LAN.
 - **tvOS**: `Info.plist` allows local-network HTTP (`NSAllowsLocalNetworking`)
   but not arbitrary HTTP over the internet. A remote, non-HTTPS RomM server
   will need an ATS exception added there.
+
+## License
+
+[MIT](LICENSE) © 2026 RommStream contributors.
