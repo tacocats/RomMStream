@@ -3,7 +3,7 @@ import React from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useAuth } from '../auth/AuthContext';
 import { LoginScreen } from '../screens/LoginScreen';
-import { PlatformListScreen } from '../screens/PlatformListScreen';
+import { MainScreen } from '../screens/MainScreen';
 import { PlayerScreen } from '../screens/PlayerScreen';
 import { RomListScreen } from '../screens/RomListScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
@@ -40,8 +40,8 @@ export function RootNavigator() {
       ) : (
         <>
           <Stack.Screen
-            name="Platforms"
-            component={PlatformListScreen}
+            name="Main"
+            component={MainScreen}
             options={{ headerShown: false }}
           />
           <Stack.Screen name="Roms" component={RomListScreen} />

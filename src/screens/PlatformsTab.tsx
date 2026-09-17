@@ -1,4 +1,3 @@
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -12,13 +11,16 @@ import { RommPlatform } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { FocusablePressable } from '../components/FocusablePressable';
 import { PlatformIcon } from '../components/PlatformIcon';
-import { RootStackParamList } from '../navigation/types';
+import { MainNavigation } from '../navigation/types';
 import { colors } from '../theme/colors';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Platforms'>;
+interface Props {
+  navigation: MainNavigation;
+}
 
-export function PlatformListScreen({ navigation }: Props) {
-  const { withAuth, signOut, serverUrl } = useAuth();
+/** "Platforms" tab of the main screen: the library grouped by platform. */
+export function PlatformsTab({ navigation }: Props) {
+  const { withAuth, serverUrl } = useAuth();
   const [platforms, setPlatforms] = useState<RommPlatform[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,29 +44,8 @@ export function PlatformListScreen({ navigation }: Props) {
   }, [load]);
 
   return (
-    <View style={styles.container} testID="platforms-screen">
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>Platforms</Text>
-          <Text style={styles.subtitle}>{serverUrl}</Text>
-        </View>
-        <View style={styles.headerButtons}>
-          <FocusablePressable
-            style={styles.signOutButton}
-            onPress={() => navigation.navigate('Settings')}
-            testID="settings-button"
-          >
-            <Text style={styles.signOutText}>Settings</Text>
-          </FocusablePressable>
-          <FocusablePressable
-            style={styles.signOutButton}
-            onPress={signOut}
-            testID="sign-out-button"
-          >
-            <Text style={styles.signOutText}>Sign Out</Text>
-          </FocusablePressable>
-        </View>
-      </View>
+    <View style={styles.container} testID="platforms-tab">
+      <Text style={styles.title}>Platforms</Text>
 
       {loading && (
         <ActivityIndicator
@@ -133,18 +114,13 @@ export function PlatformListScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background, padding: 32 },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+  container: { flex: 1, paddingHorizontal: 32, paddingBottom: 32 },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: colors.text,
     marginBottom: 24,
   },
-  title: { fontSize: 28, fontWeight: '700', color: colors.text },
-  subtitle: { fontSize: 14, color: colors.textMuted, marginTop: 4 },
-  headerButtons: { flexDirection: 'row', gap: 12 },
-  signOutButton: { paddingHorizontal: 16, paddingVertical: 10 },
-  signOutText: { color: colors.text, fontWeight: '600' },
   centerFill: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   error: { color: colors.danger, fontSize: 16, marginBottom: 16 },
   retryButton: { paddingHorizontal: 20, paddingVertical: 12 },

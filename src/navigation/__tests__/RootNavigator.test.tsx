@@ -1,7 +1,6 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { render, screen } from '@testing-library/react-native';
 import React from 'react';
-import { getPlatforms } from '../../api/rommClient';
 import { useAuth } from '../../auth/AuthContext';
 import { createAuthValue } from '../../testUtils/mockAuth';
 import { RootNavigator } from '../RootNavigator';
@@ -37,16 +36,16 @@ describe('RootNavigator', () => {
     await renderNavigator();
 
     expect(await screen.findByTestId('login-submit')).toBeOnTheScreen();
-    expect(screen.queryByTestId('platforms-screen')).toBeNull();
+    expect(screen.queryByTestId('main-screen')).toBeNull();
   });
 
-  it('shows the platform list when signed in', async () => {
-    jest.mocked(getPlatforms).mockResolvedValue([]);
+  it('shows the main screen on its Home tab when signed in', async () => {
     mockedUseAuth.mockReturnValue(createAuthValue({ status: 'signedIn' }));
 
     await renderNavigator();
 
-    expect(await screen.findByTestId('platforms-screen')).toBeOnTheScreen();
+    expect(await screen.findByTestId('main-screen')).toBeOnTheScreen();
+    expect(screen.getByText('Hello world')).toBeOnTheScreen();
     expect(screen.queryByTestId('login-submit')).toBeNull();
   });
 });

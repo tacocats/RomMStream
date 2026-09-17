@@ -1,17 +1,11 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useCallback, useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { getRoms } from '../api/rommClient';
 import { RommRom } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { FocusablePressable } from '../components/FocusablePressable';
+import { playerParamsFor, RomGrid } from '../components/RomGrid';
 import { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 
@@ -78,57 +72,14 @@ export function RomListScreen({ route, navigation }: Props) {
       )}
 
       {!loading && !error && roms.length > 0 && (
-        <FlatList
-          data={roms}
-          keyExtractor={item => String(item.id)}
-          numColumns={5}
-          contentContainerStyle={styles.grid}
-          renderItem={({ item, index }) => (
-            <FocusablePressable
-              style={styles.tile}
-              hasTVPreferredFocus={index === 0}
-              testID={`rom-tile-${item.id}`}
-              onPress={() =>
-                navigation.navigate('Player', {
-                  romId: item.id,
-                  romName: item.name,
-                  platformSlug: item.platform_slug ?? '',
-                })
-              }
-            >
-              {item.url_cover ? (
-                <Image
-                  source={{ uri: resolveCoverUrl(serverUrl, item.url_cover) }}
-                  style={styles.cover}
-                  resizeMode="cover"
-                  testID={`rom-cover-${item.id}`}
-                />
-              ) : (
-                <View
-                  style={[styles.cover, styles.coverPlaceholder]}
-                  testID={`rom-cover-placeholder-${item.id}`}
-                >
-                  <Text style={styles.coverPlaceholderText} numberOfLines={3}>
-                    {item.name}
-                  </Text>
-                </View>
-              )}
-              <Text style={styles.tileName} numberOfLines={2}>
-                {item.name}
-              </Text>
-            </FocusablePressable>
-          )}
+        <RomGrid
+          roms={roms}
+          serverUrl={serverUrl}
+          onSelect={rom => navigation.navigate('Player', playerParamsFor(rom))}
         />
       )}
     </View>
   );
-}
-
-function resolveCoverUrl(serverUrl: string, urlCover: string): string {
-  if (/^https?:\/\//i.test(urlCover)) {
-    return urlCover;
-  }
-  return `${serverUrl}${urlCover.startsWith('/') ? '' : '/'}${urlCover}`;
 }
 
 const styles = StyleSheet.create({
@@ -144,28 +95,4 @@ const styles = StyleSheet.create({
   error: { color: colors.danger, fontSize: 16, marginBottom: 16 },
   retryButton: { paddingHorizontal: 20, paddingVertical: 12 },
   buttonText: { color: colors.text, fontWeight: '600' },
-  grid: { paddingBottom: 32 },
-  tile: { flex: 1, margin: 8, padding: 8, maxWidth: '20%' },
-  cover: {
-    width: '100%',
-    aspectRatio: 3 / 4,
-    borderRadius: 6,
-    backgroundColor: colors.border,
-  },
-  coverPlaceholder: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 8,
-  },
-  coverPlaceholderText: {
-    color: colors.textMuted,
-    textAlign: 'center',
-    fontSize: 12,
-  },
-  tileName: {
-    color: colors.text,
-    fontSize: 13,
-    marginTop: 6,
-    textAlign: 'center',
-  },
 });

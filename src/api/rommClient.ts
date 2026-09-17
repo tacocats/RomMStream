@@ -108,6 +108,29 @@ export async function getPlatforms(
 // repeatable `platform_ids` parameter; `platform_id` is silently ignored.
 const ROMS_PAGE_SIZE = 500;
 
+// Free-text search across the whole library via the `search_term` filter of
+// the same endpoint. One page is plenty for a search box.
+const SEARCH_PAGE_SIZE = 100;
+
+export async function searchRoms(
+  serverUrl: string,
+  accessToken: string,
+  searchTerm: string,
+): Promise<RommRom[]> {
+  const params = new URLSearchParams({
+    search_term: searchTerm,
+    limit: String(SEARCH_PAGE_SIZE),
+    offset: '0',
+    order_by: 'name',
+    order_dir: 'asc',
+  });
+
+  const response = await fetch(`${serverUrl}/api/roms?${params.toString()}`, {
+    headers: authHeaders(accessToken),
+  });
+  return unwrapList<RommRom>(await parseJsonOrThrow(response));
+}
+
 export async function getRoms(
   serverUrl: string,
   accessToken: string,

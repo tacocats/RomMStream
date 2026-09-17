@@ -13,20 +13,8 @@ const mockedUseAuth = jest.mocked(useAuth);
 const mockedGetRoms = jest.mocked(getRoms);
 
 const ROMS = [
-  {
-    id: 1,
-    name: 'Zelda',
-    platform_id: 3,
-    platform_slug: 'snes',
-    url_cover: '/assets/romm/resources/1/cover.png',
-  },
-  {
-    id: 2,
-    name: 'Mario',
-    platform_id: 3,
-    platform_slug: 'snes',
-    url_cover: 'https://cdn.example/m.png',
-  },
+  { id: 1, name: 'Zelda', platform_id: 3, platform_slug: 'snes' },
+  { id: 2, name: 'Mario', platform_id: 3, platform_slug: 'snes' },
   { id: 3, name: 'Metroid', platform_id: 3 },
 ];
 
@@ -51,13 +39,14 @@ describe('RomListScreen', () => {
     const { navigation, rendered } = renderScreen();
     await rendered;
 
-    expect(await screen.findByText('Zelda')).toBeOnTheScreen();
+    expect(await screen.findByTestId('rom-tile-1')).toHaveTextContent(/Zelda/);
     expect(navigation.setOptions).toHaveBeenCalledWith({ title: 'SNES' });
     expect(mockedGetRoms).toHaveBeenCalledWith(
       'https://romm.test',
       'access-token',
       3,
     );
+    expect(screen.queryByTestId('roms-loading')).toBeNull();
 
     const tiles = screen.getAllByTestId(/^rom-tile-/);
     expect(tiles.map(tile => tile.props.testID)).toEqual([
@@ -67,37 +56,13 @@ describe('RomListScreen', () => {
     ]);
   });
 
-  it('resolves cover URLs against the server and falls back to a placeholder', async () => {
-    mockedGetRoms.mockResolvedValueOnce([...ROMS]);
-    const { rendered } = renderScreen();
-    await rendered;
-    await screen.findByText('Zelda');
-
-    expect(screen.getByTestId('rom-cover-1').props.source).toEqual({
-      uri: 'https://romm.test/assets/romm/resources/1/cover.png',
-    });
-    expect(screen.getByTestId('rom-cover-2').props.source).toEqual({
-      uri: 'https://cdn.example/m.png',
-    });
-    expect(screen.queryByTestId('rom-cover-3')).toBeNull();
-    expect(screen.getByTestId('rom-cover-placeholder-3')).toHaveTextContent(
-      'Metroid',
-    );
-  });
-
-  it('opens the player for a rom, defaulting the platform slug', async () => {
+  it('opens the player for a rom', async () => {
     mockedGetRoms.mockResolvedValueOnce([...ROMS]);
     const { navigation, rendered } = renderScreen();
     await rendered;
 
-    await fireEvent.press(await screen.findByTestId('rom-tile-1'));
-    expect(navigation.navigate).toHaveBeenCalledWith('Player', {
-      romId: 1,
-      romName: 'Zelda',
-      platformSlug: 'snes',
-    });
+    await fireEvent.press(await screen.findByTestId('rom-tile-3'));
 
-    await fireEvent.press(screen.getByTestId('rom-tile-3'));
     expect(navigation.navigate).toHaveBeenCalledWith('Player', {
       romId: 3,
       romName: 'Metroid',
@@ -113,7 +78,6 @@ describe('RomListScreen', () => {
     expect(
       await screen.findByText('No games found for this platform.'),
     ).toBeOnTheScreen();
-    expect(screen.queryByTestId('roms-loading')).toBeNull();
   });
 
   it('shows the error and reloads on Retry', async () => {
@@ -127,7 +91,7 @@ describe('RomListScreen', () => {
 
     await fireEvent.press(screen.getByTestId('retry-button'));
 
-    expect(await screen.findByText('Mario')).toBeOnTheScreen();
+    expect(await screen.findByTestId('rom-tile-2')).toHaveTextContent(/Mario/);
     expect(mockedGetRoms).toHaveBeenCalledTimes(2);
   });
 });

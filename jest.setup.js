@@ -61,11 +61,19 @@ jest.mock(
   () => require('react-native-safe-area-context/jest/mock').default,
 );
 
-// react-native-svg's SvgXml becomes a View that keeps the xml it was given.
+// react-native-svg components become Views that keep their props (SvgXml
+// keeps the xml it was given).
 jest.mock('react-native-svg', () => {
   const React = require('react');
   const { View } = require('react-native');
-  const SvgXml = props =>
-    React.createElement(View, { testID: 'svg-xml', ...props });
-  return { __esModule: true, SvgXml, default: SvgXml };
+  const mockComponent = testID => props =>
+    React.createElement(View, { testID, ...props });
+  const Svg = mockComponent('svg');
+  return {
+    __esModule: true,
+    default: Svg,
+    Svg,
+    Path: mockComponent('svg-path'),
+    SvgXml: mockComponent('svg-xml'),
+  };
 });

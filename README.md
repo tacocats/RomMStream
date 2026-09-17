@@ -16,13 +16,17 @@ TV-only app (no phone/tablet target).
    `POST /api/token` endpoint (`grant_type=password`). Tokens and credentials
    are stored in the OS keychain via `react-native-keychain`, never in plain
    AsyncStorage.
-2. **Browse** (`PlatformListScreen` → `RomListScreen`) — uses the stored
-   access token as a Bearer token against `GET /api/platforms` and
-   `GET /api/roms?platform_ids=...` (note the plural — `platform_id` is
-   silently ignored). `/api/roms` is limit/offset paginated with a default
-   page of 50, so the client pages through the whole platform. A 401 triggers
-   a one-time silent refresh via `POST /api/token` with
-   `grant_type=refresh_token` (see `src/auth/AuthContext.tsx`).
+2. **Browse** (`MainScreen` with its Home / Platforms / Search tabs →
+   `RomListScreen`) — the signed-in landing screen is a top bar over three
+   tabs held as local state (switching tabs never adds navigation history).
+   Platforms and the rom list use the stored access token as a Bearer token
+   against `GET /api/platforms` and `GET /api/roms?platform_ids=...` (note
+   the plural — `platform_id` is silently ignored). `/api/roms` is
+   limit/offset paginated with a default page of 50, so the client pages
+   through the whole platform. Search hits the same endpoint with
+   `search_term=...`, debounced while typing. A 401 triggers a one-time
+   silent refresh via `POST /api/token` with `grant_type=refresh_token`
+   (see `src/auth/AuthContext.tsx`).
 3. **Play** (`PlayerScreen`) — RomM's web frontend (where EmulatorJS runs)
    authenticates via an `httpOnly` session cookie, not the OAuth token, and
    cookies are per-origin, so the login has to happen _inside_ the WebView.
@@ -195,9 +199,9 @@ git-ignored `lefthook-local.yml`. Detox never runs from a hook.
 src/
   api/            RomM REST client (login, refresh, platforms, roms)
   auth/           AuthContext (session state) + Keychain-backed secure storage
-  components/     Shared TV-focusable UI pieces
+  components/     Shared TV-focusable UI pieces (top bar, rom grid, icons)
   navigation/      React Navigation stack
-  screens/        Login, Platforms, Roms, Player (WebView), Settings
+  screens/        Login, Main (Home/Platforms/Search tabs), Roms, Player (WebView), Settings
   settings/       On-device settings (play path template) via AsyncStorage
   testUtils/      Helpers shared by the Jest tests
   theme/          Shared color tokens
