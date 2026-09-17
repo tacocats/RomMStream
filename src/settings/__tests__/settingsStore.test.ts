@@ -2,10 +2,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   AUTO_PLAY_PATH,
   buildPlayPath,
+  DEFAULT_IN_BROWSER_PLAY_ENABLED,
   DEFAULT_LOGIN_PATH,
   DEFAULT_PLAY_PATH_TEMPLATE,
+  getInBrowserPlayEnabled,
   getLoginPath,
   getPlayPathTemplate,
+  setInBrowserPlayEnabled,
   setLoginPath,
   setPlayPathTemplate,
 } from '../settingsStore';
@@ -29,6 +32,20 @@ describe('buildPlayPath', () => {
         expected,
       );
     });
+
+    it('falls back to the plain rom page for every platform when in-browser play is disabled', () => {
+      for (const platformSlug of ['snes', 'flash', 'win3x', 'pico', 'switch']) {
+        expect(
+          buildPlayPath(AUTO_PLAY_PATH, { id: 5, platformSlug }, false),
+        ).toBe('/rom/5');
+      }
+    });
+  });
+
+  it('ignores in-browser play for a custom template', () => {
+    expect(
+      buildPlayPath('/rom/{id}', { id: 42, platformSlug: 'snes' }, false),
+    ).toBe('/rom/42');
   });
 
   it('substitutes {id} into a custom template', () => {
@@ -48,11 +65,26 @@ describe('buildPlayPath', () => {
 });
 
 describe('persisted settings', () => {
-  it('defaults to auto play path and /api/login', async () => {
+  it('defaults to auto play path, /api/login and in-browser play on', async () => {
     expect(DEFAULT_PLAY_PATH_TEMPLATE).toBe(AUTO_PLAY_PATH);
     expect(DEFAULT_LOGIN_PATH).toBe('/api/login');
+    expect(DEFAULT_IN_BROWSER_PLAY_ENABLED).toBe(true);
     await expect(getPlayPathTemplate()).resolves.toBe(AUTO_PLAY_PATH);
     await expect(getLoginPath()).resolves.toBe('/api/login');
+    await expect(getInBrowserPlayEnabled()).resolves.toBe(true);
+  });
+
+  it('round-trips in-browser play under a versioned key', async () => {
+    await setInBrowserPlayEnabled(false);
+
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+      'rommstream.inBrowserPlayEnabled.v1',
+      'false',
+    );
+    await expect(getInBrowserPlayEnabled()).resolves.toBe(false);
+
+    await setInBrowserPlayEnabled(true);
+    await expect(getInBrowserPlayEnabled()).resolves.toBe(true);
   });
 
   it('round-trips the play path template under a versioned key', async () => {

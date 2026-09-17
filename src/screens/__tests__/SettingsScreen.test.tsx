@@ -1,8 +1,10 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import React from 'react';
 import {
+  getInBrowserPlayEnabled,
   getLoginPath,
   getPlayPathTemplate,
+  setInBrowserPlayEnabled,
   setLoginPath,
   setPlayPathTemplate,
 } from '../../settings/settingsStore';
@@ -16,6 +18,10 @@ describe('SettingsScreen', () => {
   it('starts from the defaults when nothing is stored', async () => {
     await render(<SettingsScreen />);
 
+    expect(
+      screen.getByTestId('settings-in-browser-play').props.accessibilityState
+        .checked,
+    ).toBe(true);
     expect(screen.getByTestId('settings-login-path')).toHaveDisplayValue(
       '/api/login',
     );
@@ -23,6 +29,7 @@ describe('SettingsScreen', () => {
   });
 
   it('loads the stored values into the inputs', async () => {
+    await setInBrowserPlayEnabled(false);
     await setLoginPath('/custom/login');
     await setPlayPathTemplate('/rom/{id}');
 
@@ -32,12 +39,17 @@ describe('SettingsScreen', () => {
     expect(screen.getByTestId('settings-play-path')).toHaveDisplayValue(
       '/rom/{id}',
     );
+    expect(
+      screen.getByTestId('settings-in-browser-play').props.accessibilityState
+        .checked,
+    ).toBe(false);
   });
 
   it('saves trimmed values and falls back to defaults for empty ones', async () => {
     jest.useFakeTimers();
     await render(<SettingsScreen />);
 
+    await fireEvent.press(screen.getByTestId('settings-in-browser-play'));
     await fireEvent.changeText(
       screen.getByTestId('settings-play-path'),
       '  /rom/{id}  ',
@@ -49,6 +61,7 @@ describe('SettingsScreen', () => {
     await fireEvent.press(screen.getByTestId('settings-save'));
 
     expect(await screen.findByText('Saved')).toBeOnTheScreen();
+    await expect(getInBrowserPlayEnabled()).resolves.toBe(false);
     await expect(getPlayPathTemplate()).resolves.toBe('/rom/{id}');
     await expect(getLoginPath()).resolves.toBe('/api/login');
 

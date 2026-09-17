@@ -6,6 +6,7 @@ import { useAuth } from '../auth/AuthContext';
 import { RootStackParamList } from '../navigation/types';
 import {
   buildPlayPath,
+  getInBrowserPlayEnabled,
   getLoginPath,
   getPlayPathTemplate,
 } from '../settings/settingsStore';
@@ -136,14 +137,20 @@ export function PlayerScreen({ route }: Props) {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([getPlayPathTemplate(), getLoginPath()]).then(
-      ([template, login]) => {
-        setPlayUrl(
-          `${serverUrl}${buildPlayPath(template, { id: romId, platformSlug })}`,
-        );
-        setLoginPath(login);
-      },
-    );
+    Promise.all([
+      getPlayPathTemplate(),
+      getLoginPath(),
+      getInBrowserPlayEnabled(),
+    ]).then(([template, login, inBrowserPlayEnabled]) => {
+      setPlayUrl(
+        `${serverUrl}${buildPlayPath(
+          template,
+          { id: romId, platformSlug },
+          inBrowserPlayEnabled,
+        )}`,
+      );
+      setLoginPath(login);
+    });
   }, [serverUrl, romId, platformSlug]);
 
   const handleMessage = (event: WebViewMessageEvent) => {

@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import React from 'react';
 import { useAuth } from '../../auth/AuthContext';
 import {
+  setInBrowserPlayEnabled,
   setLoginPath,
   setPlayPathTemplate,
 } from '../../settings/settingsStore';
@@ -66,6 +67,21 @@ describe('PlayerScreen', () => {
     expect(player.props.injectedJavaScript).not.toContain('/api/login');
     expect(player.props.injectedJavaScript).toContain('play-button');
     expect(screen.queryByText(/Signing in/)).toBeNull();
+  });
+
+  it('falls back to the plain rom page when in-browser play is disabled', async () => {
+    await setInBrowserPlayEnabled(false);
+    const { webview } = await renderPlayer('snes');
+
+    await fireEvent(
+      webview,
+      'message',
+      loginMessage({ type: 'login', ok: true }),
+    );
+
+    expect(screen.getByTestId('player-webview').props.source).toEqual({
+      uri: `${SERVER}/rom/5`,
+    });
   });
 
   it('honours the stored play path template and login path', async () => {

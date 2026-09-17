@@ -2,16 +2,44 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { FocusablePressable } from '../components/FocusablePressable';
 import {
+  DEFAULT_IN_BROWSER_PLAY_ENABLED,
   DEFAULT_LOGIN_PATH,
   DEFAULT_PLAY_PATH_TEMPLATE,
+  getInBrowserPlayEnabled,
   getLoginPath,
   getPlayPathTemplate,
+  setInBrowserPlayEnabled,
   setLoginPath,
   setPlayPathTemplate,
 } from '../settings/settingsStore';
 import { colors } from '../theme/colors';
 
+interface ToggleProps {
+  value: boolean;
+  onValueChange: () => void;
+  testID: string;
+}
+
+/** A remote-friendly on/off switch, built on FocusablePressable rather than
+ * RN's Switch so it gets the app's usual TV focus treatment for free. */
+function Toggle({ value, onValueChange, testID }: ToggleProps) {
+  return (
+    <FocusablePressable
+      style={[styles.toggleTrack, value && styles.toggleTrackOn]}
+      onPress={onValueChange}
+      accessibilityRole="switch"
+      accessibilityState={{ checked: value }}
+      testID={testID}
+    >
+      <View style={[styles.toggleKnob, value && styles.toggleKnobOn]} />
+    </FocusablePressable>
+  );
+}
+
 export function SettingsScreen() {
+  const [inBrowserPlayEnabled, setInBrowserPlayEnabledInput] = useState(
+    DEFAULT_IN_BROWSER_PLAY_ENABLED,
+  );
   const [playPathTemplate, setPlayPathTemplateInput] = useState(
     DEFAULT_PLAY_PATH_TEMPLATE,
   );
@@ -19,11 +47,13 @@ export function SettingsScreen() {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
+    getInBrowserPlayEnabled().then(setInBrowserPlayEnabledInput);
     getPlayPathTemplate().then(setPlayPathTemplateInput);
     getLoginPath().then(setLoginPathInput);
   }, []);
 
   const handleSave = async () => {
+    await setInBrowserPlayEnabled(inBrowserPlayEnabled);
     await setPlayPathTemplate(
       playPathTemplate.trim() || DEFAULT_PLAY_PATH_TEMPLATE,
     );
@@ -36,7 +66,22 @@ export function SettingsScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>Settings</Text>
 
-      <Text style={styles.label}>Login path</Text>
+      <View style={styles.toggleRow}>
+        <View style={styles.toggleTextWrap}>
+          <Text style={styles.label}>In-Browser Play</Text>
+          <Text style={styles.help}>
+            Enable in-browser retro emulators (EmulatorJS, js-dos, MS-DOS,
+            PICO-8, Ruffle)
+          </Text>
+        </View>
+        <Toggle
+          value={inBrowserPlayEnabled}
+          onValueChange={() => setInBrowserPlayEnabledInput(v => !v)}
+          testID="settings-in-browser-play"
+        />
+      </View>
+
+      <Text style={[styles.label, styles.secondField]}>Login path</Text>
       <Text style={styles.help}>
         Endpoint the web player signs in against (HTTP Basic) to pick up its
         session cookie. Only change this if the game screen reports the login
@@ -88,6 +133,14 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: 24,
   },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 20,
+    maxWidth: 620,
+    marginBottom: 12,
+  },
+  toggleTextWrap: { flex: 1 },
   label: { color: colors.textPrimary, fontSize: 16, marginBottom: 6 },
   secondField: { marginTop: 24 },
   help: {
@@ -105,6 +158,31 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 16,
     maxWidth: 520,
+  },
+  toggleTrack: {
+    width: 52,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 2,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceSolid,
+    padding: 2,
+    justifyContent: 'center',
+  },
+  toggleTrackOn: {
+    backgroundColor: colors.accentSoft,
+    borderColor: colors.accent,
+  },
+  toggleKnob: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.textMuted,
+    alignSelf: 'flex-start',
+  },
+  toggleKnobOn: {
+    backgroundColor: colors.accent,
+    alignSelf: 'flex-end',
   },
   button: {
     marginTop: 24,

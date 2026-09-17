@@ -28,14 +28,15 @@ interface ChipRowProps {
 }
 
 function ChipRow({ label, items }: ChipRowProps) {
-  if (items.length === 0) {
+  const uniqueItems = Array.from(new Set(items));
+  if (uniqueItems.length === 0) {
     return null;
   }
   return (
     <View style={styles.chipSection}>
       <Text style={styles.chipLabel}>{label.toUpperCase()}</Text>
       <View style={styles.chipRow}>
-        {items.map(item => (
+        {uniqueItems.map(item => (
           <View key={item} style={styles.chip}>
             <Text style={styles.chipText}>{item}</Text>
           </View>
@@ -127,7 +128,7 @@ export function GameDetailsScreen({ route, navigation }: Props) {
                 {rom.is_identified && (
                   <VerifiedIcon color={colors.accent} size={16} />
                 )}
-                {(rom.regions ?? []).map(region => (
+                {Array.from(new Set(rom.regions ?? [])).map(region => (
                   <View key={region} style={styles.regionBadge}>
                     <Text style={styles.regionText}>{region}</Text>
                   </View>

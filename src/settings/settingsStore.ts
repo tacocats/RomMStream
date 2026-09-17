@@ -4,6 +4,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // correct default changed, so it can't override a fix.
 const PLAY_PATH_TEMPLATE_KEY = 'rommstream.playPathTemplate.v2';
 const LOGIN_PATH_KEY = 'rommstream.loginPath.v2';
+const IN_BROWSER_PLAY_ENABLED_KEY = 'rommstream.inBrowserPlayEnabled.v1';
+
+export const DEFAULT_IN_BROWSER_PLAY_ENABLED = true;
 
 // "auto" mirrors the Play button in RomM's frontend
 // (components/common/Game/PlayBtn.vue): pick the web player route for the
@@ -111,7 +114,16 @@ export interface PlayTarget {
   platformSlug: string;
 }
 
-function resolveAutoPlayPath({ id, platformSlug }: PlayTarget): string {
+function resolveAutoPlayPath(
+  { id, platformSlug }: PlayTarget,
+  inBrowserPlayEnabled: boolean,
+): string {
+  // With in-browser play off, every platform falls back to the plain rom
+  // page rather than one of the browser-emulator routes below.
+  if (!inBrowserPlayEnabled) {
+    return `/rom/${id}`;
+  }
+
   const slug = platformSlug.toLowerCase();
   if (EJS_PLATFORM_SLUGS.has(slug)) {
     return `/rom/${id}/ejs`;
@@ -128,9 +140,13 @@ function resolveAutoPlayPath({ id, platformSlug }: PlayTarget): string {
   return `/rom/${id}`;
 }
 
-export function buildPlayPath(template: string, target: PlayTarget): string {
+export function buildPlayPath(
+  template: string,
+  target: PlayTarget,
+  inBrowserPlayEnabled: boolean = DEFAULT_IN_BROWSER_PLAY_ENABLED,
+): string {
   if (template === AUTO_PLAY_PATH) {
-    return resolveAutoPlayPath(target);
+    return resolveAutoPlayPath(target, inBrowserPlayEnabled);
   }
   return template.replace('{id}', String(target.id));
 }
@@ -151,4 +167,13 @@ export async function getLoginPath(): Promise<string> {
 
 export async function setLoginPath(path: string): Promise<void> {
   await AsyncStorage.setItem(LOGIN_PATH_KEY, path);
+}
+
+export async function getInBrowserPlayEnabled(): Promise<boolean> {
+  const stored = await AsyncStorage.getItem(IN_BROWSER_PLAY_ENABLED_KEY);
+  return stored === null ? DEFAULT_IN_BROWSER_PLAY_ENABLED : stored === 'true';
+}
+
+export async function setInBrowserPlayEnabled(enabled: boolean): Promise<void> {
+  await AsyncStorage.setItem(IN_BROWSER_PLAY_ENABLED_KEY, String(enabled));
 }
