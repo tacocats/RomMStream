@@ -25,7 +25,11 @@ Depending on the ROM, it will automatically launch into either:
 
 ## Screenshots
 
-todo
+|                                                             Home                                                              |                                             Platforms                                              |
+| :---------------------------------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------: |
+| ![Home screen: library stats across the top, with Recently added and Recommended for you shelves below](docs/screenshot1.png) |    ![Platforms grid, each tile showing a console icon and its game count](docs/screenshot4.png)    |
+|                                                          **Search**                                                           |                                          **Game details**                                          |
+|           ![Search screen with a query typed, platform filter chips, and matching cover art](docs/screenshot3.png)            | ![Game details for Apotris: cover art, Play button, summary, players, genres](docs/sceenshot2.png) |
 
 ## Developers
 
@@ -166,7 +170,7 @@ src/
   components/     Shared TV-focusable UI pieces (top bar, rom grid, icons)
   navigation/      React Navigation stack
   screens/        Login, Main (Home/Platforms/Search tabs), Roms, Player (WebView), Settings
-  settings/       On-device settings (play path template) via AsyncStorage
+  settings/       On-device settings (login path, in-browser play) via AsyncStorage
   testUtils/      Helpers shared by the Jest tests
   theme/          Shared color tokens
 e2e/              Detox end-to-end tests (Android TV)
