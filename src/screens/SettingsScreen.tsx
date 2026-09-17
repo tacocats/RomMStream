@@ -1,18 +1,19 @@
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { FocusablePressable } from '../components/FocusablePressable';
+import { RootStackParamList } from '../navigation/types';
 import {
   DEFAULT_IN_BROWSER_PLAY_ENABLED,
   DEFAULT_LOGIN_PATH,
-  DEFAULT_PLAY_PATH_TEMPLATE,
   getInBrowserPlayEnabled,
   getLoginPath,
-  getPlayPathTemplate,
   setInBrowserPlayEnabled,
   setLoginPath,
-  setPlayPathTemplate,
 } from '../settings/settingsStore';
 import { colors } from '../theme/colors';
+
+type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
 interface ToggleProps {
   value: boolean;
@@ -36,30 +37,21 @@ function Toggle({ value, onValueChange, testID }: ToggleProps) {
   );
 }
 
-export function SettingsScreen() {
+export function SettingsScreen({ navigation }: Props) {
   const [inBrowserPlayEnabled, setInBrowserPlayEnabledInput] = useState(
     DEFAULT_IN_BROWSER_PLAY_ENABLED,
   );
-  const [playPathTemplate, setPlayPathTemplateInput] = useState(
-    DEFAULT_PLAY_PATH_TEMPLATE,
-  );
   const [loginPath, setLoginPathInput] = useState(DEFAULT_LOGIN_PATH);
-  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     getInBrowserPlayEnabled().then(setInBrowserPlayEnabledInput);
-    getPlayPathTemplate().then(setPlayPathTemplateInput);
     getLoginPath().then(setLoginPathInput);
   }, []);
 
   const handleSave = async () => {
     await setInBrowserPlayEnabled(inBrowserPlayEnabled);
-    await setPlayPathTemplate(
-      playPathTemplate.trim() || DEFAULT_PLAY_PATH_TEMPLATE,
-    );
     await setLoginPath(loginPath.trim() || DEFAULT_LOGIN_PATH);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    navigation.goBack();
   };
 
   return (
@@ -96,30 +88,12 @@ export function SettingsScreen() {
         testID="settings-login-path"
       />
 
-      <Text style={[styles.label, styles.secondField]}>
-        Web player path template
-      </Text>
-      <Text style={styles.help}>
-        Page opened when you pick a game. `auto` picks the web player for the
-        game's platform (EmulatorJS, Ruffle, js-dos, PICO-8) like RomM's own
-        Play button, falling back to the rom page. Or set a fixed template with{' '}
-        {'{id}'} as the rom id, e.g. `/rom/{'{id}'}`.
-      </Text>
-      <TextInput
-        style={styles.input}
-        value={playPathTemplate}
-        onChangeText={setPlayPathTemplateInput}
-        autoCapitalize="none"
-        autoCorrect={false}
-        testID="settings-play-path"
-      />
-
       <FocusablePressable
         style={styles.button}
         onPress={handleSave}
         testID="settings-save"
       >
-        <Text style={styles.buttonText}>{saved ? 'Saved' : 'Save'}</Text>
+        <Text style={styles.buttonText}>Save</Text>
       </FocusablePressable>
     </View>
   );

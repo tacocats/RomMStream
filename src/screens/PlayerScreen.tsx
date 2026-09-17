@@ -12,11 +12,8 @@ import { RommRomDetail } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { RootStackParamList } from '../navigation/types';
 import {
-  AUTO_PLAY_PATH,
-  buildPlayPath,
   getInBrowserPlayEnabled,
   getLoginPath,
-  getPlayPathTemplate,
 } from '../settings/settingsStore';
 import { colors } from '../theme/colors';
 import { Heartbeat, playPath, Rom, StreamingConfig } from '../utils/playPath';
@@ -47,7 +44,7 @@ function toPlayPathRom(rom: RommRomDetail, platformSlug: string): Rom {
 // be missing — /api/streaming/config only exists on RomM releases with the
 // streaming feature — so a failure degrades to "nothing disabled, no
 // streaming" instead of blocking the launch.
-async function resolveAutoPlayPath(
+async function resolvePlayPath(
   withAuth: WithAuth,
   romId: number,
   platformSlug: string,
@@ -197,21 +194,15 @@ export function PlayerScreen({ route }: Props) {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([
-      getPlayPathTemplate(),
-      getLoginPath(),
-      getInBrowserPlayEnabled(),
-    ])
-      .then(async ([template, login, inBrowserPlayEnabled]) => {
+    Promise.all([getLoginPath(), getInBrowserPlayEnabled()])
+      .then(([login, inBrowserPlayEnabled]) => {
         setLoginPath(login);
-        return template === AUTO_PLAY_PATH
-          ? resolveAutoPlayPath(
-              withAuth,
-              romId,
-              platformSlug,
-              inBrowserPlayEnabled,
-            )
-          : buildPlayPath(template, romId);
+        return resolvePlayPath(
+          withAuth,
+          romId,
+          platformSlug,
+          inBrowserPlayEnabled,
+        );
       })
       .then(path => setPlayUrl(`${serverUrl}${path}`));
   }, [serverUrl, romId, platformSlug, withAuth]);

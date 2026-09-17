@@ -10,7 +10,6 @@ import { useAuth } from '../../auth/AuthContext';
 import {
   setInBrowserPlayEnabled,
   setLoginPath,
-  setPlayPathTemplate,
 } from '../../settings/settingsStore';
 import { createAuthValue } from '../../testUtils/mockAuth';
 import { createScreenProps } from '../../testUtils/navigation';
@@ -168,17 +167,11 @@ describe('PlayerScreen', () => {
     });
   });
 
-  it('honours the stored play path template and login path', async () => {
-    await setPlayPathTemplate('/rom/{id}');
+  it('honours the stored login path', async () => {
     await setLoginPath('/custom/login');
     const { webview } = await renderPlayer('snes');
 
     expect(webview.props.injectedJavaScript).toContain('fetch("/custom/login"');
-
-    expect((await signIn(webview)).props.source).toEqual({
-      uri: `${SERVER}/rom/5`,
-    });
-    expect(mockedGetStreamingConfig).not.toHaveBeenCalled();
   });
 
   it('ignores messages that are not login results', async () => {
