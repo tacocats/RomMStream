@@ -47,9 +47,9 @@ export function SettingsScreen() {
 
       <Text style={[styles.label, styles.secondField]}>Web player path template</Text>
       <Text style={styles.help}>
-        Page opened when you pick a game. Use {'{id}'} as the rom id placeholder. The default
-        `/rom/{'{id}'}` is RomM's rom page with its Play button; `/rom/{'{id}'}/ejs` jumps
-        straight into the EmulatorJS player for platforms it supports.
+        Page opened when you pick a game. `auto` picks the web player for the game's platform
+        (EmulatorJS, Ruffle, js-dos, PICO-8) like RomM's own Play button, falling back to the
+        rom page. Or set a fixed template with {'{id}'} as the rom id, e.g. `/rom/{'{id}'}`.
       </Text>
       <TextInput
         style={styles.input}

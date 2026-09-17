@@ -58,7 +58,7 @@ function describeLoginFailure(status: number | undefined, loginPath: string, err
 }
 
 export function PlayerScreen({ route, navigation }: Props) {
-  const { romId, romName } = route.params;
+  const { romId, romName, platformSlug } = route.params;
   const { serverUrl, username, password } = useAuth();
   const [playUrl, setPlayUrl] = useState<string | null>(null);
   const [loginPath, setLoginPath] = useState<string | null>(null);
@@ -71,10 +71,10 @@ export function PlayerScreen({ route, navigation }: Props) {
 
   useEffect(() => {
     Promise.all([getPlayPathTemplate(), getLoginPath()]).then(([template, login]) => {
-      setPlayUrl(`${serverUrl}${buildPlayPath(template, romId)}`);
+      setPlayUrl(`${serverUrl}${buildPlayPath(template, { id: romId, platformSlug })}`);
       setLoginPath(login);
     });
-  }, [serverUrl, romId]);
+  }, [serverUrl, romId, platformSlug]);
 
   const handleMessage = (event: WebViewMessageEvent) => {
     if (step !== 'logging-in' || !loginPath) {

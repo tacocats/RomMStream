@@ -67,7 +67,13 @@ export function RomListScreen({ route, navigation }: Props) {
             <FocusablePressable
               style={styles.tile}
               hasTVPreferredFocus={index === 0}
-              onPress={() => navigation.navigate('Player', { romId: item.id, romName: item.name })}>
+              onPress={() =>
+                navigation.navigate('Player', {
+                  romId: item.id,
+                  romName: item.name,
+                  platformSlug: item.platform_slug ?? '',
+                })
+              }>
               {item.url_cover ? (
                 <Image
                   source={{ uri: resolveCoverUrl(serverUrl, item.url_cover) }}

@@ -41,9 +41,15 @@ were checked against `rommapp/romm` `master` (`backend/endpoints/auth.py`,
 `frontend/src/plugins/router.ts`). They're still editable under **Settings**
 on the device in case a future RomM release moves them — no rebuild needed.
 
-The play path template defaults to `/rom/{id}` (the rom page, with its Play
-button, which works for every platform). `/rom/{id}/ejs` opens the
-EmulatorJS player directly, for platforms it supports.
+The play path defaults to `auto`, which mirrors RomM's own Play button
+(`frontend/src/components/common/Game/PlayBtn.vue`): platforms with an
+EmulatorJS core open `/rom/{id}/ejs`, Flash/browser games open
+`/rom/{id}/ruffle`, Win3x/Win9x open `/rom/{id}/jsdos`, PICO-8 opens
+`/rom/{id}/pico8`, and anything else falls back to the rom page `/rom/{id}`.
+The EmulatorJS platform list is a snapshot of RomM's `_EJS_CORES_MAP` in
+`src/settings/settingsStore.ts`; if a newly supported platform lands on the
+rom page instead of the player, add its slug there. A fixed template such as
+`/rom/{id}` can be set in Settings to override the auto behaviour.
 
 ## Prerequisites
 

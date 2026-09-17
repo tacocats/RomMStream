@@ -22,6 +22,7 @@ export interface RommRom {
   id: number;
   name: string;
   platform_id: number;
+  platform_slug?: string;
   platform_name?: string;
   fs_name?: string;
   url_cover?: string;
