@@ -3,9 +3,9 @@
 > [!WARNING]
 > Requires RomM server 5.3.0-alpha
 
-Stream your games on your TV like you would Movies or Shows on Plex/Jellyfin!
+Stream your games on your TV like you would Movies on Plex/Jellyfin!
 
-RomMStream is React Native TV app for Android TV and Apple TV (tvOS) that signs in to a
+RomMStream is a React Native TV app for Android TV and Apple TV (tvOS) that signs in to a
 [RomM](https://github.com/rommapp/romm) server, browses your library by
 platform, and launches the game in a WebView pointed at RomM's own web
 player.
@@ -24,6 +24,8 @@ Depending on the ROM, it will automatically launch into either:
 - [Emulator Streaming](https://docs.romm.app/5.3.0-alpha/using/emulator-streaming/)
 
 ## Screenshots
+
+todo
 
 ## Developers
 
