@@ -25,7 +25,7 @@ TV-only app (no phone/tablet target).
    `grant_type=refresh_token` (see `src/auth/AuthContext.tsx`).
 3. **Play** (`PlayerScreen`) — RomM's web frontend (where EmulatorJS runs)
    authenticates via an `httpOnly` session cookie, not the OAuth token, and
-   cookies are per-origin, so the login has to happen *inside* the WebView.
+   cookies are per-origin, so the login has to happen _inside_ the WebView.
    The WebView first loads a cheap same-origin page (`GET /api/heartbeat`),
    then an injected script does `fetch('/api/login')` with HTTP Basic
    credentials — the same call RomM's own login page makes. RomM's CSRF
@@ -112,6 +112,83 @@ bundle exec pod install --project-directory=ios
 npx react-native run-tvos --simulator "Apple TV"
 ```
 
+## Testing
+
+### Unit, integration and component tests
+
+Jest with [React Native Testing Library](https://callstack.github.io/react-native-testing-library/)
+v14 (note its API is async: `await render(...)`, `await fireEvent.press(...)`).
+
+```sh
+npm test               # whole suite
+npm run test:watch
+npm run test:coverage  # coverage for src/
+npm run typecheck      # tsc --noEmit
+npm run lint
+```
+
+- Tests live next to the code in `src/**/__tests__/`. The pure modules
+  (`api/rommClient`, `auth/secureStore`, `settings/settingsStore`, the SVG
+  class inliner) have unit tests; `auth/__tests__/AuthContext.test.tsx` is an
+  integration test that drives the real context, API client and secure store
+  against a mocked `fetch` and keychain; every screen and component has an
+  RNTL test.
+- Native modules are mocked once in `jest.setup.js` (WebView, keychain,
+  AsyncStorage, react-native-svg, safe-area-context) with just enough state
+  to behave like the real thing. `jest.setupAfterEnv.js` resets that state and
+  installs a `fetch` mock that fails loudly unless a test queues a response.
+  Shared helpers (`mockFetchOnce`, `createAuthValue`, `createScreenProps`)
+  are in `src/testUtils/`.
+- Gotcha: RNTL's `act` returns React's bare thenable, so
+  `await expect(act(...)).resolves` does not wait for it. Wrap it in
+  `Promise.resolve(...)` first (see `actAsync` in the AuthContext test).
+
+### End-to-end tests (Detox, Android TV)
+
+`e2e/login.test.js` boots the app on an Android TV emulator, checks the login
+form and drives a sign-in against an unreachable server. Detox does not
+support tvOS.
+
+Prerequisites: the Android SDK, JDK 17, and an Android TV AVD named
+`Television_1080p` (Android Studio → Device Manager → TV, or `avdmanager`
+with an `android-tv` system image; change `avdName` in `.detoxrc.js` if
+yours differs).
+
+```sh
+export ANDROID_HOME=$HOME/Android/Sdk
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64   # Gradle needs JDK 17
+npm run e2e:build     # assembles the debug + androidTest APKs
+npm start             # in another terminal: debug builds load JS from Metro
+npm run e2e:test      # boots the AVD (or reuses a running one) and runs e2e/
+```
+
+If port 8081 is taken on your machine, set `RCT_METRO_PORT` (e.g. `8082`)
+before both `npm run e2e:build` and `npm start -- --port 8082`: the build
+bakes that port into the debug APK (Gradle property
+`reactNativeDevServerPort`, see `android/app/build.gradle`) so the app on the
+emulator finds Metro.
+
+Typing into a field opens the TV's on-screen keyboard over the lower half of
+the screen, so the e2e test closes it with `tapReturnKey()` after each field
+before touching anything below it.
+
+`npx detox test --configuration android.att.debug` runs the same suite on a
+physical Android TV attached over `adb`. Running against a release build
+would additionally need a network security config permitting cleartext to
+`10.0.2.2` (Detox's test server), see the Detox docs.
+
+### Git hooks
+
+[lefthook](https://lefthook.dev) installs the hooks on `npm install`
+(`lefthook.yml`):
+
+- **pre-commit**: Prettier on the staged files (fixes are re-staged), then
+  ESLint, `tsc --noEmit` and the Jest suites related to the staged files.
+- **pre-push**: the full Jest suite.
+
+Skip once with `LEFTHOOK=0 git commit ...`; put personal tweaks in the
+git-ignored `lefthook-local.yml`. Detox never runs from a hook.
+
 ## Project layout
 
 ```
@@ -122,7 +199,9 @@ src/
   navigation/      React Navigation stack
   screens/        Login, Platforms, Roms, Player (WebView), Settings
   settings/       On-device settings (play path template) via AsyncStorage
+  testUtils/      Helpers shared by the Jest tests
   theme/          Shared color tokens
+e2e/              Detox end-to-end tests (Android TV)
 ```
 
 ## Notes on HTTP-only RomM servers

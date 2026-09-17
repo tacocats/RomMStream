@@ -2,12 +2,15 @@
  * @format
  */
 
+import { render, screen } from '@testing-library/react-native';
 import React from 'react';
-import ReactTestRenderer from 'react-test-renderer';
 import App from '../App';
 
-test('renders correctly', async () => {
-  await ReactTestRenderer.act(() => {
-    ReactTestRenderer.create(<App />);
-  });
+test('boots to the login screen when no session is stored', async () => {
+  await render(<App />);
+
+  expect(
+    await screen.findByText('Sign in to your RomM server'),
+  ).toBeOnTheScreen();
+  expect(screen.getByTestId('login-submit')).toBeOnTheScreen();
 });

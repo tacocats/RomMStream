@@ -84,6 +84,14 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        // Detox instrumentation (see e2e/ and android/app/src/androidTest).
+        testBuildType System.getProperty('testBuildType', 'debug')
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+        // Port the debug app loads its JS bundle from (Metro). Override it when
+        // 8081 is taken on your machine: -PreactNativeDevServerPort=8082, and
+        // start Metro on the same port (RCT_METRO_PORT=8082 npm start).
+        resValue "integer", "react_native_dev_server_port",
+            (project.findProperty("reactNativeDevServerPort") ?: "8081").toString()
     }
     signingConfigs {
         debug {
@@ -103,6 +111,8 @@ android {
             signingConfig signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            // Detox reaches into React Native via reflection; keep that code un-minified.
+            proguardFile "${rootProject.projectDir}/../node_modules/detox/android/detox/proguard-rules-app.pro"
         }
     }
 }
@@ -116,4 +126,8 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+
+    // Detox e2e (only compiled into the androidTest APK).
+    androidTestImplementation('com.wix:detox:+')
+    implementation('androidx.appcompat:appcompat:1.1.0')
 }

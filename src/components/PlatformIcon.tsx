@@ -16,7 +16,7 @@ interface Props {
 // doesn't resolve stylesheet classes, so every shape would fall back to the
 // SVG default fill of black. Inline each class's declarations onto the
 // elements that use it before handing the markup to SvgXml.
-function inlineSvgClasses(svg: string): string {
+export function inlineSvgClasses(svg: string): string {
   const styleMatch = svg.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
   if (!styleMatch) {
     return svg;
@@ -37,7 +37,10 @@ function inlineSvgClasses(svg: string): string {
         continue;
       }
       const existing = declarationsByClass.get(className);
-      declarationsByClass.set(className, existing ? `${existing};${trimmed}` : trimmed);
+      declarationsByClass.set(
+        className,
+        existing ? `${existing};${trimmed}` : trimmed,
+      );
     }
   }
 
@@ -55,9 +58,17 @@ function inlineSvgClasses(svg: string): string {
 
 // Try each known slug in turn (fs_slug first, matching RomM's own web UI)
 // and fall back to a letter badge if none resolve.
-export function PlatformIcon({ serverUrl, name, slug, fsSlug, size = 56 }: Props) {
+export function PlatformIcon({
+  serverUrl,
+  name,
+  slug,
+  fsSlug,
+  size = 56,
+}: Props) {
   const candidates = Array.from(
-    new Set([fsSlug, slug].filter((s): s is string => !!s).map(s => s.toLowerCase())),
+    new Set(
+      [fsSlug, slug].filter((s): s is string => !!s).map(s => s.toLowerCase()),
+    ),
   );
   const [attempt, setAttempt] = useState(0);
   const [xml, setXml] = useState<string | null>(null);
@@ -94,7 +105,12 @@ export function PlatformIcon({ serverUrl, name, slug, fsSlug, size = 56 }: Props
 
   if (!candidate) {
     return (
-      <View style={[styles.fallback, { width: size, height: size, borderRadius: size / 4 }]}>
+      <View
+        style={[
+          styles.fallback,
+          { width: size, height: size, borderRadius: size / 4 },
+        ]}
+      >
         <Text style={styles.fallbackText}>{name.charAt(0).toUpperCase()}</Text>
       </View>
     );

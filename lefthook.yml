@@ -1,0 +1,33 @@
+# Git hooks. Installed by `npm install` (lefthook's postinstall / the `prepare`
+# script); run one by hand with `npx lefthook run pre-commit`.
+#
+# pre-commit stays fast: it only looks at staged files. The full Jest suite
+# runs on pre-push. Detox e2e is never run from a hook (needs an emulator
+# build); see the Testing section in README.md.
+pre-commit:
+  jobs:
+    # Format first so the checks below see the formatted files.
+    - name: prettier
+      glob: '*.{js,jsx,ts,tsx,json,md,yml,yaml}'
+      run: npx prettier --write {staged_files}
+      stage_fixed: true
+
+    - group:
+        parallel: true
+        jobs:
+          - name: eslint
+            glob: '*.{js,jsx,ts,tsx}'
+            run: npx eslint --max-warnings=0 {staged_files}
+
+          - name: typecheck
+            glob: '*.{ts,tsx}'
+            run: npx tsc --noEmit
+
+          - name: jest-related
+            glob: '*.{js,jsx,ts,tsx}'
+            run: npx jest --bail --findRelatedTests --passWithNoTests {staged_files}
+
+pre-push:
+  jobs:
+    - name: jest
+      run: npx jest --ci

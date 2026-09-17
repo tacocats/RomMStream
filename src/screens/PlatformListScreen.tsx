@@ -42,7 +42,7 @@ export function PlatformListScreen({ navigation }: Props) {
   }, [load]);
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="platforms-screen">
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>Platforms</Text>
@@ -51,21 +51,38 @@ export function PlatformListScreen({ navigation }: Props) {
         <View style={styles.headerButtons}>
           <FocusablePressable
             style={styles.signOutButton}
-            onPress={() => navigation.navigate('Settings')}>
+            onPress={() => navigation.navigate('Settings')}
+            testID="settings-button"
+          >
             <Text style={styles.signOutText}>Settings</Text>
           </FocusablePressable>
-          <FocusablePressable style={styles.signOutButton} onPress={signOut}>
+          <FocusablePressable
+            style={styles.signOutButton}
+            onPress={signOut}
+            testID="sign-out-button"
+          >
             <Text style={styles.signOutText}>Sign Out</Text>
           </FocusablePressable>
         </View>
       </View>
 
-      {loading && <ActivityIndicator style={styles.centerFill} color={colors.accent} size="large" />}
+      {loading && (
+        <ActivityIndicator
+          style={styles.centerFill}
+          color={colors.accent}
+          size="large"
+          testID="platforms-loading"
+        />
+      )}
 
       {!loading && error && (
         <View style={styles.centerFill}>
           <Text style={styles.error}>{error}</Text>
-          <FocusablePressable style={styles.retryButton} onPress={load}>
+          <FocusablePressable
+            style={styles.retryButton}
+            onPress={load}
+            testID="retry-button"
+          >
             <Text style={styles.buttonText}>Retry</Text>
           </FocusablePressable>
         </View>
@@ -82,9 +99,14 @@ export function PlatformListScreen({ navigation }: Props) {
               style={styles.tile}
               focusedStyle={styles.tileFocused}
               hasTVPreferredFocus={index === 0}
+              testID={`platform-tile-${item.id}`}
               onPress={() =>
-                navigation.navigate('Roms', { platformId: item.id, platformName: item.name })
-              }>
+                navigation.navigate('Roms', {
+                  platformId: item.id,
+                  platformName: item.name,
+                })
+              }
+            >
               <View style={styles.iconWrap}>
                 <PlatformIcon
                   serverUrl={serverUrl}
@@ -160,5 +182,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
-  tileCount: { color: colors.textMuted, fontSize: 12, marginTop: 4, textAlign: 'center' },
+  tileCount: {
+    color: colors.textMuted,
+    fontSize: 12,
+    marginTop: 4,
+    textAlign: 'center',
+  },
 });

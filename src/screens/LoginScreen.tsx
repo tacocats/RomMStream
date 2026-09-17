@@ -20,7 +20,10 @@ export function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const canSubmit = serverUrl.trim().length > 0 && username.trim().length > 0 && password.length > 0;
+  const canSubmit =
+    serverUrl.trim().length > 0 &&
+    username.trim().length > 0 &&
+    password.length > 0;
 
   const handleSubmit = async () => {
     if (!canSubmit || submitting) {
@@ -38,7 +41,10 @@ export function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       <View style={styles.card}>
         <Text style={styles.title}>RommStream</Text>
         <Text style={styles.subtitle}>Sign in to your RomM server</Text>
@@ -54,6 +60,7 @@ export function LoginScreen() {
           value={serverUrl}
           onChangeText={setServerUrl}
           hasTVPreferredFocus
+          testID="login-server-url"
         />
 
         <Text style={styles.label}>Username</Text>
@@ -64,6 +71,7 @@ export function LoginScreen() {
           autoCorrect={false}
           value={username}
           onChangeText={setUsername}
+          testID="login-username"
         />
 
         <Text style={styles.label}>Password</Text>
@@ -76,16 +84,23 @@ export function LoginScreen() {
           value={password}
           onChangeText={setPassword}
           onSubmitEditing={handleSubmit}
+          testID="login-password"
         />
 
-        {error && <Text style={styles.error}>{error}</Text>}
+        {error && (
+          <Text style={styles.error} testID="login-error">
+            {error}
+          </Text>
+        )}
 
         <FocusablePressable
           style={[styles.button, !canSubmit && styles.buttonDisabled]}
           onPress={handleSubmit}
-          disabled={!canSubmit || submitting}>
+          disabled={!canSubmit || submitting}
+          testID="login-submit"
+        >
           {submitting ? (
-            <ActivityIndicator color={colors.text} />
+            <ActivityIndicator color={colors.text} testID="login-spinner" />
           ) : (
             <Text style={styles.buttonText}>Sign In</Text>
           )}

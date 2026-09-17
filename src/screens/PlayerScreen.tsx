@@ -4,7 +4,11 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import { useAuth } from '../auth/AuthContext';
 import { RootStackParamList } from '../navigation/types';
-import { buildPlayPath, getLoginPath, getPlayPathTemplate } from '../settings/settingsStore';
+import {
+  buildPlayPath,
+  getLoginPath,
+  getPlayPathTemplate,
+} from '../settings/settingsStore';
 import { colors } from '../theme/colors';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Player'>;
@@ -20,14 +24,20 @@ const BOOTSTRAP_PATH = '/api/heartbeat';
 // middleware skips the token check when an Authorization header is present,
 // so a plain fetch from the page is enough — no CSRF cookie dance required.
 // Android's WebView can't attach headers to a POST navigation, hence fetch.
-function buildLoginScript(loginPath: string, username: string, password: string): string {
+function buildLoginScript(
+  loginPath: string,
+  username: string,
+  password: string,
+): string {
   return `
     (function () {
       var post = function (payload) {
         window.ReactNativeWebView.postMessage(JSON.stringify(payload));
       };
       try {
-        var creds = ${JSON.stringify(username)} + ':' + ${JSON.stringify(password)};
+        var creds = ${JSON.stringify(username)} + ':' + ${JSON.stringify(
+    password,
+  )};
         var basic = btoa(unescape(encodeURIComponent(creds)));
         fetch(${JSON.stringify(loginPath)}, {
           method: 'POST',
@@ -100,7 +110,11 @@ const AUTO_PLAY_SCRIPT = `
   true;
 `;
 
-function describeLoginFailure(status: number | undefined, loginPath: string, error?: string): string {
+function describeLoginFailure(
+  status: number | undefined,
+  loginPath: string,
+  error?: string,
+): string {
   if (status === 401) {
     return 'RomM rejected the username/password. Sign out and sign in again.';
   }
@@ -126,17 +140,26 @@ export function PlayerScreen({ route, navigation }: Props) {
   }, [navigation, romName]);
 
   useEffect(() => {
-    Promise.all([getPlayPathTemplate(), getLoginPath()]).then(([template, login]) => {
-      setPlayUrl(`${serverUrl}${buildPlayPath(template, { id: romId, platformSlug })}`);
-      setLoginPath(login);
-    });
+    Promise.all([getPlayPathTemplate(), getLoginPath()]).then(
+      ([template, login]) => {
+        setPlayUrl(
+          `${serverUrl}${buildPlayPath(template, { id: romId, platformSlug })}`,
+        );
+        setLoginPath(login);
+      },
+    );
   }, [serverUrl, romId, platformSlug]);
 
   const handleMessage = (event: WebViewMessageEvent) => {
     if (step !== 'logging-in' || !loginPath) {
       return;
     }
-    let payload: { type?: string; ok?: boolean; status?: number; error?: string };
+    let payload: {
+      type?: string;
+      ok?: boolean;
+      status?: number;
+      error?: string;
+    };
     try {
       payload = JSON.parse(event.nativeEvent.data);
     } catch {
@@ -148,14 +171,20 @@ export function PlayerScreen({ route, navigation }: Props) {
     if (payload.ok) {
       setStep('ready');
     } else {
-      setLoadError(describeLoginFailure(payload.status, loginPath, payload.error));
+      setLoadError(
+        describeLoginFailure(payload.status, loginPath, payload.error),
+      );
     }
   };
 
   if (!playUrl || !loginPath) {
     return (
       <View style={styles.centerFill}>
-        <ActivityIndicator color={colors.accent} size="large" />
+        <ActivityIndicator
+          color={colors.accent}
+          size="large"
+          testID="player-loading"
+        />
       </View>
     );
   }
@@ -170,7 +199,9 @@ export function PlayerScreen({ route, navigation }: Props) {
       )}
       {loadError && (
         <View style={styles.overlay}>
-          <Text style={styles.error}>{loadError}</Text>
+          <Text style={styles.error} testID="player-error">
+            {loadError}
+          </Text>
         </View>
       )}
       {/* Keyed on step so the game page gets a fresh WebView that can't
@@ -178,8 +209,12 @@ export function PlayerScreen({ route, navigation }: Props) {
           store is shared across WebView instances on both platforms. */}
       <WebView
         key={step}
+        testID="player-webview"
         style={styles.webview}
-        source={{ uri: step === 'logging-in' ? `${serverUrl}${BOOTSTRAP_PATH}` : playUrl }}
+        source={{
+          uri:
+            step === 'logging-in' ? `${serverUrl}${BOOTSTRAP_PATH}` : playUrl,
+        }}
         injectedJavaScript={
           step === 'logging-in'
             ? buildLoginScript(loginPath, username, password)
@@ -187,7 +222,10 @@ export function PlayerScreen({ route, navigation }: Props) {
         }
         onMessage={handleMessage}
         onError={syntheticEvent => {
-          setLoadError(syntheticEvent.nativeEvent.description || 'Failed to load the web player');
+          setLoadError(
+            syntheticEvent.nativeEvent.description ||
+              'Failed to load the web player',
+          );
         }}
         webviewDebuggingEnabled={__DEV__}
         sharedCookiesEnabled
@@ -223,5 +261,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   overlayText: { color: colors.textMuted, fontSize: 16 },
-  error: { color: colors.danger, fontSize: 16, paddingHorizontal: 32, textAlign: 'center' },
+  error: {
+    color: colors.danger,
+    fontSize: 16,
+    paddingHorizontal: 32,
+    textAlign: 'center',
+  },
 });

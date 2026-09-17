@@ -23,7 +23,7 @@ export function RootNavigator() {
 
   if (status === 'loading') {
     return (
-      <View style={loadingStyles.container}>
+      <View style={loadingStyles.container} testID="auth-loading">
         <ActivityIndicator color={colors.accent} size="large" />
       </View>
     );
@@ -32,7 +32,11 @@ export function RootNavigator() {
   return (
     <Stack.Navigator screenOptions={screenOptions}>
       {status === 'signedOut' ? (
-        <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+        <Stack.Screen
+          name="Login"
+          component={LoginScreen}
+          options={{ headerShown: false }}
+        />
       ) : (
         <>
           <Stack.Screen

@@ -19,3 +19,12 @@ buildscript {
 }
 
 apply plugin: "com.facebook.react.rootproject"
+
+allprojects {
+    repositories {
+        // Detox ships its Android test library inside the npm package.
+        maven {
+            url("$rootDir/../node_modules/detox/Detox-android")
+        }
+    }
+}

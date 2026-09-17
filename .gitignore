@@ -65,6 +65,10 @@ yarn-error.log
 
 # testing
 /coverage
+# Detox screenshots/logs
+/artifacts
+# per-developer lefthook overrides
+lefthook-local.yml
 
 # Yarn
 .yarn/*
