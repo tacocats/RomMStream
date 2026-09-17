@@ -127,17 +127,13 @@ function describeLoginFailure(
   return `Sign-in request failed: ${error ?? 'unknown error'}`;
 }
 
-export function PlayerScreen({ route, navigation }: Props) {
-  const { romId, romName, platformSlug } = route.params;
+export function PlayerScreen({ route }: Props) {
+  const { romId, platformSlug } = route.params;
   const { serverUrl, username, password } = useAuth();
   const [playUrl, setPlayUrl] = useState<string | null>(null);
   const [loginPath, setLoginPath] = useState<string | null>(null);
   const [step, setStep] = useState<Step>('logging-in');
   const [loadError, setLoadError] = useState<string | null>(null);
-
-  useEffect(() => {
-    navigation.setOptions({ title: romName });
-  }, [navigation, romName]);
 
   useEffect(() => {
     Promise.all([getPlayPathTemplate(), getLoginPath()]).then(

@@ -41,10 +41,9 @@ beforeEach(() => {
 });
 
 describe('PlayerScreen', () => {
-  it('sets the header title and bootstraps the WebView with the login script', async () => {
-    const { navigation, webview } = await renderPlayer();
+  it('bootstraps the WebView with the login script', async () => {
+    const { webview } = await renderPlayer();
 
-    expect(navigation.setOptions).toHaveBeenCalledWith({ title: 'Zelda' });
     expect(screen.queryByTestId('player-loading')).toBeNull();
     expect(webview.props.source).toEqual({ uri: `${SERVER}/api/heartbeat` });
     expect(webview.props.injectedJavaScript).toContain('fetch("/api/login"');

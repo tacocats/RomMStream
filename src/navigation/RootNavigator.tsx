@@ -47,7 +47,11 @@ export function RootNavigator() {
           />
           <Stack.Screen name="Roms" component={RomListScreen} />
           <Stack.Screen name="GameDetails" component={GameDetailsScreen} />
-          <Stack.Screen name="Player" component={PlayerScreen} />
+          <Stack.Screen
+            name="Player"
+            component={PlayerScreen}
+            options={{ headerShown: false }}
+          />
           <Stack.Screen name="Settings" component={SettingsScreen} />
         </>
       )}
