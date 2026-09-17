@@ -1,4 +1,3 @@
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -16,11 +15,14 @@ import { FocusablePressable } from '../components/FocusablePressable';
 import { PlayIcon, VerifiedIcon } from '../components/icons';
 import { playerParamsFor } from '../components/RomGrid';
 import { platformLabelFor, resolveCoverUrl } from '../components/RomTile';
-import { RootStackParamList } from '../navigation/types';
+import { ContentNavigation, RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { formatReleaseDate } from '../utils/formatDate';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'GameDetails'>;
+interface Props {
+  route: { params: RootStackParamList['GameDetails'] };
+  navigation: ContentNavigation;
+}
 
 interface ChipRowProps {
   label: string;

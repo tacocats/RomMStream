@@ -18,3 +18,22 @@ export type MainNavigation = NativeStackNavigationProp<
   RootStackParamList,
   'Main'
 >;
+
+/**
+ * Navigation surface for views hosted inline in MainScreen's content area
+ * (the Home/Platforms/Search tabs, and the Roms/GameDetails views they lead
+ * to). Roms and GameDetails resolve to an in-frame view change instead of a
+ * stack push, so the sidebar stays visible; Player and Settings still hand
+ * off to the root stack navigator, which takes over the full screen.
+ */
+export interface ContentNavigation {
+  navigate(screen: 'Roms', params: RootStackParamList['Roms']): void;
+  navigate(
+    screen: 'GameDetails',
+    params: RootStackParamList['GameDetails'],
+  ): void;
+  navigate(screen: 'Player', params: RootStackParamList['Player']): void;
+  navigate(screen: 'Settings'): void;
+  setOptions(options: { title?: string }): void;
+  goBack(): void;
+}

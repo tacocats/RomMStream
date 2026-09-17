@@ -11,11 +11,11 @@ import { RommPlatform } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { FocusablePressable } from '../components/FocusablePressable';
 import { PlatformIcon } from '../components/PlatformIcon';
-import { MainNavigation } from '../navigation/types';
+import { ContentNavigation } from '../navigation/types';
 import { colors, focusRing } from '../theme/colors';
 
 interface Props {
-  navigation: MainNavigation;
+  navigation: ContentNavigation;
 }
 
 /** "Platforms" tab of the main screen: the library grouped by platform. */

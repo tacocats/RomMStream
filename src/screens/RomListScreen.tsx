@@ -1,4 +1,3 @@
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import {
@@ -10,10 +9,13 @@ import { RommRom } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { FocusablePressable } from '../components/FocusablePressable';
 import { gameDetailsParamsFor, RomGrid } from '../components/RomGrid';
-import { RootStackParamList } from '../navigation/types';
+import { ContentNavigation, RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Roms'>;
+interface Props {
+  route: { params: RootStackParamList['Roms'] };
+  navigation: ContentNavigation;
+}
 
 /** What kind of games list this screen shows, and its empty-state copy. */
 function describe(params: RootStackParamList['Roms']) {

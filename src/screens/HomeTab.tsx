@@ -26,12 +26,12 @@ import { FocusablePressable } from '../components/FocusablePressable';
 import { gameDetailsParamsFor } from '../components/RomGrid';
 import { RomShelf } from '../components/RomShelf';
 import { VirtualCollectionShelf } from '../components/VirtualCollectionShelf';
-import { MainNavigation } from '../navigation/types';
+import { ContentNavigation } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { formatBytes } from '../utils/formatBytes';
 
 interface Props {
-  navigation: MainNavigation;
+  navigation: ContentNavigation;
 }
 
 interface Stat {

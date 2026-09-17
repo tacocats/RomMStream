@@ -2,11 +2,9 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useAuth } from '../auth/AuthContext';
-import { GameDetailsScreen } from '../screens/GameDetailsScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { MainScreen } from '../screens/MainScreen';
 import { PlayerScreen } from '../screens/PlayerScreen';
-import { RomListScreen } from '../screens/RomListScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { colors } from '../theme/colors';
 import { RootStackParamList } from './types';
@@ -45,8 +43,6 @@ export function RootNavigator() {
             component={MainScreen}
             options={{ headerShown: false }}
           />
-          <Stack.Screen name="Roms" component={RomListScreen} />
-          <Stack.Screen name="GameDetails" component={GameDetailsScreen} />
           <Stack.Screen
             name="Player"
             component={PlayerScreen}

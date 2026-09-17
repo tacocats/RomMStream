@@ -19,7 +19,7 @@ import { FocusablePressable } from '../components/FocusablePressable';
 import { CloseIcon, SearchIcon } from '../components/icons';
 import { gameDetailsParamsFor, RomGrid } from '../components/RomGrid';
 import { platformLabelFor } from '../components/RomTile';
-import { MainNavigation } from '../navigation/types';
+import { ContentNavigation } from '../navigation/types';
 import { colors } from '../theme/colors';
 
 /** Platform chip meaning "don't filter by platform". */
@@ -29,7 +29,7 @@ export const MIN_QUERY_LENGTH = 2;
 export const SEARCH_DEBOUNCE_MS = 400;
 
 interface Props {
-  navigation: MainNavigation;
+  navigation: ContentNavigation;
 }
 
 /** "Search" tab of the main screen: free-text search across the library. */
