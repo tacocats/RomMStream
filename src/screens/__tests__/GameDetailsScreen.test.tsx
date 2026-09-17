@@ -1,8 +1,14 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import React from 'react';
-import { getRom } from '../../api/rommClient';
+import {
+  getConfig,
+  getHeartbeat,
+  getRom,
+  getStreamingConfig,
+} from '../../api/rommClient';
 import { RommRomDetail } from '../../api/types';
 import { useAuth } from '../../auth/AuthContext';
+import { setInBrowserPlayEnabled } from '../../settings/settingsStore';
 import { createAuthValue } from '../../testUtils/mockAuth';
 import { createScreenProps } from '../../testUtils/navigation';
 import { GameDetailsScreen } from '../GameDetailsScreen';
@@ -12,12 +18,15 @@ jest.mock('../../api/rommClient');
 
 const mockedUseAuth = jest.mocked(useAuth);
 const mockedGetRom = jest.mocked(getRom);
+const mockedGetHeartbeat = jest.mocked(getHeartbeat);
+const mockedGetConfig = jest.mocked(getConfig);
+const mockedGetStreamingConfig = jest.mocked(getStreamingConfig);
 
 const ROM: RommRomDetail = {
   id: 5,
   name: "Tony Hawk's Pro Skater 2",
   platform_id: 3,
-  platform_slug: 'ps',
+  platform_slug: 'psx',
   platform_display_name: 'PlayStation',
   url_cover: '/assets/romm/resources/5/cover.png',
   summary: 'A skateboarding sports game played from a third-person view.',
@@ -42,7 +51,7 @@ function renderScreen() {
   const screenProps = createScreenProps('GameDetails', {
     romId: 5,
     romName: "Tony Hawk's Pro Skater 2",
-    platformSlug: 'ps',
+    platformSlug: 'psx',
   });
   return {
     ...screenProps,
@@ -52,6 +61,12 @@ function renderScreen() {
 
 beforeEach(() => {
   mockedUseAuth.mockReturnValue(createAuthValue());
+  mockedGetHeartbeat.mockResolvedValue({ EMULATION: {} });
+  mockedGetConfig.mockResolvedValue({});
+  mockedGetStreamingConfig.mockResolvedValue({
+    enabled: false,
+    containers: [],
+  });
 });
 
 describe('GameDetailsScreen', () => {
@@ -122,7 +137,7 @@ describe('GameDetailsScreen', () => {
     expect(navigation.navigate).toHaveBeenCalledWith('Player', {
       romId: 5,
       romName: "Tony Hawk's Pro Skater 2",
-      platformSlug: 'ps',
+      platformSlug: 'psx',
     });
   });
 
@@ -136,8 +151,44 @@ describe('GameDetailsScreen', () => {
     expect(navigation.navigate).toHaveBeenCalledWith('Player', {
       romId: 5,
       romName: "Tony Hawk's Pro Skater 2",
-      platformSlug: 'ps',
+      platformSlug: 'psx',
     });
+  });
+
+  it('hides Play and explains why when nothing can launch the rom', async () => {
+    mockedGetRom.mockResolvedValueOnce({ ...ROM, platform_slug: 'switch' });
+    await renderScreen().rendered;
+
+    expect(await screen.findByTestId('no-player-notice')).toBeOnTheScreen();
+    expect(screen.queryByTestId('play-button')).toBeNull();
+    expect(
+      screen.getByText(/no in-browser player for PlayStation/),
+    ).toBeOnTheScreen();
+  });
+
+  it('points at the setting when in-browser play is what is missing', async () => {
+    await setInBrowserPlayEnabled(false);
+    mockedGetRom.mockResolvedValueOnce(ROM);
+    await renderScreen().rendered;
+
+    expect(await screen.findByTestId('no-player-notice')).toBeOnTheScreen();
+    expect(
+      screen.getByText(/In-Browser Play is turned off in Settings/),
+    ).toBeOnTheScreen();
+  });
+
+  it('keeps Play when the platform has a streaming container', async () => {
+    await setInBrowserPlayEnabled(false);
+    mockedGetStreamingConfig.mockResolvedValue({
+      enabled: true,
+      containers: [{ platform: 'psx', container: 'romm-psx' }],
+    });
+    mockedGetRom.mockResolvedValueOnce(ROM);
+    await renderScreen().rendered;
+
+    expect(await screen.findByText('Sport')).toBeOnTheScreen();
+    expect(screen.getByTestId('play-button')).toBeOnTheScreen();
+    expect(screen.queryByTestId('no-player-notice')).toBeNull();
   });
 
   it('shows the error and retries', async () => {

@@ -16,8 +16,10 @@ import { PlayIcon, VerifiedIcon } from '../components/icons';
 import { playerParamsFor } from '../components/RomGrid';
 import { platformLabelFor, resolveCoverUrl } from '../components/RomTile';
 import { ContentNavigation, RootStackParamList } from '../navigation/types';
+import { getInBrowserPlayEnabled } from '../settings/settingsStore';
 import { colors } from '../theme/colors';
 import { formatReleaseDate } from '../utils/formatDate';
+import { resolvePlayPath } from '../utils/resolvePlayPath';
 
 interface Props {
   route: { params: RootStackParamList['GameDetails'] };
@@ -52,9 +54,8 @@ function ChipRow({ label, items }: ChipRowProps) {
  * Details screen for a single rom: title, cover, metadata and a Play button
  * that hands off to the web player.
  *
- * The Play button only needs the route params (romId/platformSlug), so it's
- * live immediately rather than waiting on the metadata fetch below it — a
- * slow or failed metadata load shouldn't block launching the game.
+ * Play stays on screen until the app knows the game *can't* be launched, so
+ * a slow load never costs the user the button their remote is focused on.
  */
 export function GameDetailsScreen({ route, navigation }: Props) {
   const { romId, romName, platformSlug } = route.params;
@@ -62,6 +63,8 @@ export function GameDetailsScreen({ route, navigation }: Props) {
   const [rom, setRom] = useState<RommRomDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [playable, setPlayable] = useState<boolean | null>(null);
+  const [inBrowserPlayEnabled, setInBrowserPlayEnabled] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -69,12 +72,22 @@ export function GameDetailsScreen({ route, navigation }: Props) {
     try {
       const result = await withAuth((url, token) => getRom(url, token, romId));
       setRom(result);
+
+      const enabled = await getInBrowserPlayEnabled();
+      const path = await resolvePlayPath(
+        withAuth,
+        result,
+        platformSlug,
+        enabled,
+      );
+      setInBrowserPlayEnabled(enabled);
+      setPlayable(path !== null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load game');
     } finally {
       setLoading(false);
     }
-  }, [withAuth, romId]);
+  }, [withAuth, romId, platformSlug]);
 
   useEffect(() => {
     navigation.setOptions({ title: romName });
@@ -138,15 +151,28 @@ export function GameDetailsScreen({ route, navigation }: Props) {
               </View>
             )}
 
-            <FocusablePressable
-              style={styles.playButton}
-              onPress={play}
-              hasTVPreferredFocus
-              testID="play-button"
-            >
-              <PlayIcon color={colors.background} size={16} />
-              <Text style={styles.playButtonText}>Play</Text>
-            </FocusablePressable>
+            {playable === false ? (
+              <View style={styles.noPlayer} testID="no-player-notice">
+                <Text style={styles.noPlayerTitle}>No player available</Text>
+                <Text style={styles.noPlayerText}>
+                  {inBrowserPlayEnabled
+                    ? `RomM has no in-browser player for ${
+                        platformLabel || 'this platform'
+                      }, and your server has no streaming container for it.`
+                    : 'In-Browser Play is turned off in Settings, and your server has no streaming container for this platform.'}
+                </Text>
+              </View>
+            ) : (
+              <FocusablePressable
+                style={styles.playButton}
+                onPress={play}
+                hasTVPreferredFocus
+                testID="play-button"
+              >
+                <PlayIcon color={colors.background} size={16} />
+                <Text style={styles.playButtonText}>Play</Text>
+              </FocusablePressable>
+            )}
 
             {loading && (
               <ActivityIndicator
@@ -265,6 +291,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
+  noPlayer: {
+    alignSelf: 'flex-start',
+    maxWidth: 620,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceSolid,
+    borderRadius: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    marginTop: 4,
+    marginBottom: 24,
+  },
+  noPlayerTitle: {
+    color: colors.textPrimary,
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  noPlayerText: { color: colors.textMuted, fontSize: 14, lineHeight: 20 },
   metadataLoading: { alignItems: 'flex-start', marginTop: 8 },
   metadataError: { marginTop: 8 },
   error: { color: colors.danger, fontSize: 15, marginBottom: 12 },
